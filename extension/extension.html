@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Input and Recording</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Screen Recording Extension</h2>
+  <button id="toggleButton">Toggle Recording</button>
+
+  <h2>User Input</h2>
+  <form id="userInputForm">
+    <input type="text" id="userInput" placeholder="Enter your input">
+    <button type="submit">Submit</button>
+  </form>
+
+  <script src="extension.js"></script>
+</body>
+</html>

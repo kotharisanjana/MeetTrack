@@ -1,0 +1,19 @@
+{
+    "manifest_version": 3,
+    "name": "MeetTrack",
+    "version": "1.0",
+    "description": "A Chrome extension to capture screen and open a user input box.",
+    "permissions": ["tabCapture", "offscreen"],
+    "background": {
+        "service_worker": "service-worker.js"
+    },
+    "action": {
+        "default_popup": "extension.html",
+        "default_icon": {
+            "16": "icon.png"
+        }
+    },
+    "icons": {
+        "16": "icon.png"
+    }
+}
