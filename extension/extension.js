@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
   userInputForm.addEventListener('submit', function (event) {
     event.preventDefault();
     var userInput = document.getElementById('userInput').value;
-    alert('You entered: ' + userInput);
+    textDisplay.textContent = userInput;
   });
 });
 
