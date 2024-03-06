@@ -2,7 +2,7 @@ import moviepy.editor as moviepy
 
 class ExtractAudio:
     def __init__(self, video_file, audio_file):
-        # s3 bucket paths
+        # audio and video file paths in s3
         self.video_file = video_file
         self.audio_file = audio_file
 

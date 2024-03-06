@@ -1,4 +1,5 @@
-from setup import setup_obj, time_obj, vector_db_obj
+from setup import setup_obj, vector_db_obj
+from utils import get_unixtime
 
 import torch
 import numpy as np
@@ -64,8 +65,8 @@ class SpeakerIDsForTranscription:
             end_hour, end_min, end_sec, end_millisec  = self.extract_time_info(end)
 
             # convert start and end time to datetime
-            start_time = time_obj.get_time(start_hour, start_min, start_sec, start_millisec)
-            end_time = time_obj.get_time(end_hour, end_min, end_sec, end_millisec)
+            start_time = get_unixtime(start_hour, start_min, start_sec, start_millisec)
+            end_time = get_unixtime(end_hour, end_min, end_sec, end_millisec)
 
             # to handle incorrect diarization where a slight change in tone of the existing speaker is changing speaker id -> error
             if end_time.unixtime - start_time.unixtime < 1:

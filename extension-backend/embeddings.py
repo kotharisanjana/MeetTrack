@@ -27,3 +27,8 @@ class VoiceEmbeddings:
             self.transform_audio()
             self.create_audio_embedding()
             vector_db_obj.store_voice_embedding(filename.split(".")[0], self.voice_embedding)
+
+
+def create_text_embedding(segment):
+    segment_embedding = setup_obj.embedding_model.embed_query(segment)
+    return segment_embedding 
