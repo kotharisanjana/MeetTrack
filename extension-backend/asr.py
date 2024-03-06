@@ -1,4 +1,5 @@
-from setup import setup_obj, time_obj
+from setup import setup_obj
+from utils import get_unixtime
 
 class TranscribedText:
   def __init__(self, text):
@@ -33,11 +34,11 @@ class ASR:
     for segment in self.segments:
         start = segment.start
         hour, min, sec, millisec = self.extract_time(start)
-        start_time = time_obj.get_time(hour, min, sec, millisec)
+        start_time = get_unixtime(hour, min, sec, millisec)
 
         end = segment.end
         hour, min, sec, millisec = self.extract_time(end)
-        end_time = time_obj.get_time(hour, min, sec, millisec)
+        end_time = get_unixtime(hour, min, sec, millisec)
 
         # inconsistency in transcription timestamps
         if end_time.unixtime <= start_time.unixtime:   # [ 121.24 -> 121.9 ] Thanks, Sam (end time should be 121.90) - handle this in the logic

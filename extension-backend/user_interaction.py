@@ -3,7 +3,7 @@ from setup import setup_obj, vector_db_obj
 from collections import defaultdict
 from langchain.prompts import PromptTemplate
 
-class QueryResponse:
+class UserInteraction:
     def __init__(self, query):
         self.query = query
     
@@ -43,7 +43,7 @@ class QueryResponse:
     def get_response(self):
         return self.response
 
-    def query_pipeline(self):
+    def query_response_pipeline(self):
         self.get_query_embedding(self.query)
         self.generate_responses()
         self.format_responses()

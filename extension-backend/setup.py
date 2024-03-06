@@ -1,8 +1,5 @@
-from voice_embedding import VoiceEmbeddings
+from embeddings import VoiceEmbeddings
 from vector_store import VectorStore
-from utils import Time
-from final_transcript import FinalTranscript
-from text_embedding import TextEmbedding
 
 import os
 from dotenv import load_dotenv
@@ -37,16 +34,9 @@ setup_obj = Setup()
 setup_obj.initialise_vector_dbs()
 setup_obj.initialise_models()
 
-time_obj = Time()
-
 # set up vector database indices
 vector_db_obj = VectorStore()
 vector_db_obj.create_index()
 
 # store actual voice embeddings
-voice_emb_obj = VoiceEmbeddings()
-voice_emb_obj.actual_audio_embedding_pipeline()
-
-final_transcript_obj = FinalTranscript()
-
-text_embedding_obj = TextEmbedding()
+VoiceEmbeddings().actual_audio_embedding_pipeline()
