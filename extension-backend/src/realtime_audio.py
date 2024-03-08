@@ -3,7 +3,7 @@ from diarization import SpeakerDiarization, SpeakerIDsForTranscription
 from extract_audio import ExtractAudio
 from final_transcript import combine_asr_diarization
 from embeddings import create_text_embedding
-from setup import setup_obj, vector_db_obj
+from init import setup_obj, vector_db_obj
 
 
 class RealtimeAudio:

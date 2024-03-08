@@ -1,4 +1,4 @@
-from setup import setup_obj
+from init import setup_obj
 
 import numpy as np
 

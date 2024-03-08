@@ -1,5 +1,5 @@
-from embeddings import VoiceEmbeddings
-from vector_store import VectorStore
+from src.embeddings import VoiceEmbeddings
+from database.vector_store import VectorStore
 
 import os
 from dotenv import load_dotenv

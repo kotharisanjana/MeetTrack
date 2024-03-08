@@ -1,5 +1,5 @@
-from setup import setup_obj
-from utils import get_unixtime
+from init import setup_obj
+from common.utils import get_unixtime
 
 class TranscribedText:
   def __init__(self, text):

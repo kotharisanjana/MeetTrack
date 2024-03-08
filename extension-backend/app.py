@@ -1,5 +1,5 @@
-from realtime_audio import RealtimeAudio
-from user_interaction import UserInteraction
+from src.realtime_audio import RealtimeAudio
+from src.user_interaction import UserInteraction
 
 from flask import Flask
 

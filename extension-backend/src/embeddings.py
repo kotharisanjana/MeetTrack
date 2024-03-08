@@ -1,4 +1,4 @@
-from setup import setup_obj, vector_db_obj
+from init import setup_obj, vector_db_obj
 
 import os
 from scipy.io import wavfile

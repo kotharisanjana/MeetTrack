@@ -1,5 +1,5 @@
-from setup import setup_obj, vector_db_obj
-from utils import get_unixtime
+from init import setup_obj, vector_db_obj
+from common.utils import get_unixtime
 
 import torch
 import numpy as np
