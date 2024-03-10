@@ -1,9 +1,11 @@
-from init import setup_obj
 from common.utils import get_unixtime
+
+from flask import current_app
 
 class TranscribedText:
   def __init__(self, text):
     self.text = text
+    self.init_obj = current_app.config["init_obj"]
 
 class Transcription:
   def __init__(self, start_time, end_time, text):
@@ -16,7 +18,7 @@ class ASR:
     self.audio_file_path = audio_file_path
 
   def transcribe(self):
-    self.segments, _ = setup_obj.asr_model.transcribe(audio=self.audio_file_path, word_timestamps=True)
+    self.segments, _ = self.init_obj.asr_model.transcribe(audio=self.audio_file_path, word_timestamps=True)
 
   def extract_time(self, time):
     time_str = str(time)

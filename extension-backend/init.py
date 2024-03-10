@@ -1,7 +1,7 @@
-from src.embeddings import VoiceEmbeddings
 from database.vector_store import VectorStore
 
 import os
+from flask import current_app
 from dotenv import load_dotenv
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
@@ -9,7 +9,7 @@ from pinecone import Pinecone
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.llms.openai import OpenAI
 
-class Setup:
+class Initialisation:
     MEETING_NAME = ""
     MEETING_DATE = ""
     OUTPUT_TRANSCRIPT_FILE = ""
@@ -24,19 +24,23 @@ class Setup:
         self.db_transcript = Pinecone(api_key=os.getenv("DB_API_TRANSCRIPT"))
 
     def initialise_models(self):
-        self.asr_model = WhisperModel("base")
-        self.diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", use_auth_token=os.getenv("HF_TOKEN"))
+        # self.asr_model = WhisperModel("base")
+        # self.diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", use_auth_token=os.getenv("HF_API"))
         self.embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         self.llm = OpenAI(openai_api_key=os.getenv("OPENAI_API"))
+        print("Models initialised")
 
-# Initialise objects  
-setup_obj = Setup()
-setup_obj.initialise_vector_dbs()
-setup_obj.initialise_models()
+def initialise_objects():
+    init_obj = Initialisation()
+    init_obj.initialise_vector_dbs()
+    init_obj.initialise_models()
+    
+    vector_store_obj = VectorStore()
 
-# set up vector database indices
-vector_db_obj = VectorStore()
-vector_db_obj.create_index()
+    current_app.config["init_obj"] = init_obj
+    current_app.config["vector_store_obj"] = vector_store_obj
 
-# store actual voice embeddings
-VoiceEmbeddings().actual_audio_embedding_pipeline()
+    vector_store_obj.create_index()
+    
+
+    

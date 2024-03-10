@@ -1,11 +1,11 @@
-from setup import vector_db_obj
+from flask import current_app
 
 def combine_asr_diarization(speaker_segments, transcript_segments):
     l = len(transcript_segments)
 
     segment_num = 1
 
-    actual_speaker = vector_db_obj.get_actual_speaker(str(int(speaker_segments[0].speaker.speaker_id)))
+    actual_speaker = current_app.config["vector_store_obj"].get_actual_speaker(str(int(speaker_segments[0].speaker.speaker_id)))
     overall_text = "Speaker " + actual_speaker + ":" + transcript_segments[0].text.text
 
     for segment in speaker_segments:
@@ -13,7 +13,7 @@ def combine_asr_diarization(speaker_segments, transcript_segments):
         detime = segment.end_time.unixtime
         speaker_id = segment.speaker.speaker_id
 
-        actual_speaker = vector_db_obj.get_actual_speaker(str(int(speaker_id)))
+        actual_speaker = current_app.config["vector_store_obj"].get_actual_speaker(str(int(speaker_id)))
 
         if segment_num!=1:
             overall_text = overall_text + "\n" + "Speaker " + actual_speaker + ":"
