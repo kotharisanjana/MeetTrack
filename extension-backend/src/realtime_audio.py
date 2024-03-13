@@ -41,7 +41,7 @@ class RealtimeAudio:
 
         self.output = self.output + audio_to_text_output + "\n"
 
-        with open(self.init_obj.OUTPUT_TRANSCRIPT_FILE, "a") as text_file:
-          text_file.write(str(self.output))
+        # with open(self.init_obj.OUTPUT_TRANSCRIPT_FILE, "a") as text_file:
+        #   text_file.write(str(self.output))
 
         self.meeting_chunk += 1

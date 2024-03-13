@@ -30,7 +30,7 @@ class ASR:
     millisec = int(time_str[1][:3])
     return hour, min, sec, millisec
 
-  def transcription_segments(self):
+  def merge_transcription_segments(self):
     self.transcript_segments = []
 
     for segment in self.segments:
@@ -50,4 +50,4 @@ class ASR:
 
   def asr_pipeline(self):
     self.transcribe()
-    self.transcription_segments()
+    self.merge_transcription_segments()
