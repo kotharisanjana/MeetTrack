@@ -10,12 +10,6 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.llms.openai import OpenAI
 
 class Initialisation:
-    MEETING_NAME = ""
-    MEETING_DATE = ""
-    OUTPUT_TRANSCRIPT_FILE = ""
-    # specify path where actual speaker voice files are stored
-    ACTUAL_AUDIO_PATH = ""
-
     def __init__(self):
         load_dotenv()
 
@@ -24,11 +18,10 @@ class Initialisation:
         self.db_transcript = Pinecone(api_key=os.getenv("DB_API_TRANSCRIPT"))
 
     def initialise_models(self):
-        # self.asr_model = WhisperModel("base")
-        # self.diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", use_auth_token=os.getenv("HF_API"))
+        self.asr_model = WhisperModel("base")
+        self.diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", use_auth_token=os.getenv("HF_API"))
         self.embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         self.llm = OpenAI(openai_api_key=os.getenv("OPENAI_API"))
-        print("Models initialised")
 
 def initialise_objects():
     init_obj = Initialisation()
