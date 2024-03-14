@@ -1,19 +1,19 @@
 let recording = false;
 
 chrome.runtime.onMessage.addListener(async (message) => {
-  if (message.type === 'toggle-recording') {
+  if (message.type === "toggle-recording") {
     const existingContexts = await chrome.runtime.getContexts({});
     const offscreenDocument = existingContexts.find(
-      (c) => c.contextType === 'OFFSCREEN_DOCUMENT'
+      (c) => c.contextType === "OFFSCREEN_DOCUMENT"
     );
 
     // If an offscreen document is not already open, create one.
     if (!offscreenDocument) {
       // Create an offscreen document.
       await chrome.offscreen.createDocument({
-        url: 'extension.html',
-        reasons: ['USER_MEDIA'],
-        justification: 'Recording from chrome.tabCapture API'
+        url: "extension.html",
+        reasons: ["USER_MEDIA"],
+        justification: "Recording from chrome.tabCapture API"
       });
     }
     toggleRecording();
@@ -23,7 +23,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
 async function toggleRecording() {
   if (recording) {
     chrome.runtime.sendMessage({
-      type: 'stop-recording',
+      type: "stop-recording",
     });
     recording = false;
   } 
@@ -35,7 +35,7 @@ async function toggleRecording() {
     });
 
     chrome.runtime.sendMessage({
-      type: 'start-recording',
+      type: "start-recording",
       data: streamId
     });
     recording = true;

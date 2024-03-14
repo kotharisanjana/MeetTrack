@@ -5,29 +5,61 @@ let mediaStreamFlag = true;
 let recorderStateFlag = true;
 let media = null;
 
-document.addEventListener('DOMContentLoaded', function () {
-  var toggleButton = document.getElementById('toggleButton');
-  var userInputForm = document.getElementById('userInputForm');
-
-  toggleButton.addEventListener('click', function () {
+document.addEventListener("DOMContentLoaded", function () {
+  var meetingDetailsForm = document.getElementById("meetingDetailsForm");
+  var toggleButton = document.getElementById("toggleButton");
+  var userInputForm = document.getElementById("userInputForm");
+  
+  toggleButton.addEventListener("click", function () {
     chrome.runtime.sendMessage({
-      type: 'toggle-recording',
+      type: "toggle-recording",
     });
   });
 
-  userInputForm.addEventListener('submit', function (event) {
+  meetingDetailsForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var name = document.getElementById('meetingName').value;
+    var date = document.getElementById('meetingDate').value;
+
+    fetch("http://localhost:5000/details", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ name: name, date: date})
+    })
+    .catch(error => console.error("Error:", error));
+
+    meetingDetailsForm.classList.add("disabled");
+    toggleButton.classList.remove("disabled");
+    userInputForm.classList.remove("disabled");
+  });
+
+  userInputForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var userInput = document.getElementById('userInput').value;
-    textDisplay.textContent = userInput;
+
+    fetch("http://localhost:5000/query", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ userInput: userInput })
+    })
+    .then(response => response.json())
+    .then(data => {
+      textDisplay.textContent = data.response;
+  })
+    .catch(error => console.error("Error:", error));
   });
 });
 
 chrome.runtime.onMessage.addListener(async (message) => {
   switch (message.type) {
-    case 'start-recording':
+    case "start-recording":
       startRecording(message.data);
       break;
-    case 'stop-recording':
+    case "stop-recording":
       fullShutdown = true;
       stopRecording();
       break;
@@ -38,7 +70,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
 async function startRecording(streamId) {
   try {
     // Check if a recording is already in progress
-    if (recorder && recorder.state === 'recording') {
+    if (recorder && recorder.state === "recording") {
       return;
     }
 
@@ -48,13 +80,13 @@ async function startRecording(streamId) {
         media = await navigator.mediaDevices.getUserMedia({
           audio: {
             mandatory: {
-              chromeMediaSource: 'tab',
+              chromeMediaSource: "tab",
               chromeMediaSourceId: streamId
             }
           },
           video: {
             mandatory: {
-              chromeMediaSource: 'tab',
+              chromeMediaSource: "tab",
               chromeMediaSourceId: streamId
             }
           }
@@ -67,24 +99,24 @@ async function startRecording(streamId) {
         mediaStreamFlag = false;
     }
   } catch (error) {
-    console.error('Error starting tab capture:', error);
+    console.error("Error starting tab capture:", error);
   };
 
-    recorder = new MediaRecorder(media, { mimeType: 'video/webm' });
+    recorder = new MediaRecorder(media, { mimeType: "video/webm" });
 
     recorder.ondataavailable = (event) => {
       data.push(event.data);
     }
 
     recorder.onstop = () => {
-      const blob = new Blob(data, { type: 'video/webm' });
+      const blob = new Blob(data, { type: "video/webm" });
       const recordingUrl = URL.createObjectURL(blob);
 
-      const a = document.createElement('a');
-      a.style.display = 'none';
+      const a = document.createElement("a");
+      a.style.display = "none";
       document.body.appendChild(a);
       a.href = recordingUrl;
-      a.download = 'recording.webm';
+      a.download = "recording.webm";
       a.click();
 
       URL.revokeObjectURL(recordingUrl);
@@ -105,16 +137,12 @@ async function startRecording(streamId) {
       }, 30000);
     }
   } catch (error) {
-    console.error('Error starting tab capture:', error);
-    // Retry after a delay if the error is related to tab capture
-    // if (error.name === 'AbortError') {
-    //   setTimeout(() => startRecording(streamId), 1000);
-    // }
+    console.error("Error starting tab capture:", error);
   }
 }
 
 function stopRecording() {
-  if (recorder && recorder.state === 'recording') {
+  if (recorder && recorder.state === "recording") {
     recorder.stop();
 
     if (fullShutdown)
