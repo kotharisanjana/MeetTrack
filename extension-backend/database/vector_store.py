@@ -1,11 +1,10 @@
-from init import setup_obj
-
+from flask import current_app
 import numpy as np
 
 class VectorStore():
     def create_index(self):
-        self.db_audio_index = setup_obj.db_audio.Index("speaker-voices")
-        self.db_transcript_index = setup_obj.db_transcript.Index("transcripts")
+        self.db_audio_index = current_app.config["init_obj"].db_audio.Index("speaker-voices")
+        self.db_transcript_index = current_app.config["init_obj"].db_transcript.Index("transcripts")
 
     def get_actual_speaker(self, speaker_id):
         record = self.db_audio_index.fetch(ids=[speaker_id], namespace="identified_speaker_embeddings")
@@ -20,16 +19,21 @@ class VectorStore():
         return actual_speaker
     
     def store_text_embedding(self, meeting_chunk, segment, segment_embedding):
+        name = current_app.config["init_obj"].MEETING_NAME
+        date = current_app.config["init_obj"].MEETING_DATE
         self.db_transcript_index.upsert(
             vectors=[
-                {"id":setup_obj.MEETING_NAME + "_" + setup_obj.MEETING_DATE + "_" +str(meeting_chunk), 
-                "values":segment_embedding,
-                "metadata":{
-                    "segment_text": segment,
-                    "meeting_name": setup_obj.MEETING_NAME,
-                    "meeting_date": setup_obj.MEETING_DATE}
+                {
+                    "id":name + "_" + date + "_" +str(meeting_chunk), 
+                    "values":segment_embedding,
+                    "metadata":
+                    {
+                        "segment_text": segment,
+                        "meeting_name": name,
+                        "meeting_date": date
+                    }
                 }
-                ],
+            ],
             namespace="transcript_embeddings"
         )
 
@@ -39,7 +43,7 @@ class VectorStore():
             top_k=3,
             namespace="transcript_embeddings",
             filter={
-              "meeting_name": setup_obj.MEETING_NAME,
+              "meeting_name": current_app.config["init_obj"].MEETING_NAME,
               },
             include_metadata=True
         )

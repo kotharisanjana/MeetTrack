@@ -3,11 +3,13 @@ from diarization import SpeakerDiarization, SpeakerIDsForTranscription
 from extract_audio import ExtractAudio
 from final_transcript import combine_asr_diarization
 from embeddings import create_text_embedding
-from init import setup_obj, vector_db_obj
 
+from flask import current_app
 
 class RealtimeAudio:
     def __init__(self, video_file, audio_file):
+        self.init_obj = current_app.config["init_obj"]
+        self.vector_store_obj = current_app.config["vector_store_obj"]
         self.video_file = video_file
         self.audio_file = audio_file
         self.meeting_chunk = 0
@@ -35,11 +37,11 @@ class RealtimeAudio:
 
         # create transcript segment embeddings and store in vector store
         audio_to_text_embedding = create_text_embedding(audio_to_text_output)
-        vector_db_obj.store_text_embedding(self.meeting_chunk, audio_to_text_output, audio_to_text_embedding)
+        self.vector_store_obj.store_text_embedding(self.meeting_chunk, audio_to_text_output, audio_to_text_embedding)
 
         self.output = self.output + audio_to_text_output + "\n"
 
-        with open(setup_obj.OUTPUT_TRANSCRIPT_FILE, "a") as text_file:
-          text_file.write(str(self.output))
+        # with open(self.init_obj.OUTPUT_TRANSCRIPT_FILE, "a") as text_file:
+        #   text_file.write(str(self.output))
 
         self.meeting_chunk += 1

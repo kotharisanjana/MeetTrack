@@ -1,5 +1,5 @@
-from init import setup_obj, vector_db_obj
 from common.utils import get_unixtime
+from flask import current_app
 
 import torch
 import numpy as np
@@ -7,6 +7,8 @@ from scipy.io import wavfile
 
 class SpeakerDiarization:
     def __init__(self, audio_file_path):
+        self.init_obj = current_app.config["init_obj"]
+        self.vector_store_obj = current_app.config["vector_store_obj"]
         self.audio_file_path = audio_file_path
 
     def read_audio_file(self):
@@ -20,13 +22,13 @@ class SpeakerDiarization:
         self.tensor_data = torch.tensor(self.data).float().unsqueeze(0)
 
     def diarize(self):
-        self.speakers, self.embeddings = setup_obj.pipeline({'waveform': self.tensor_data, 'sample_rate': self.samplerate}, return_embeddings=True)
+        self.speakers, self.embeddings = self.init_obj.pipeline({"waveform": self.tensor_data, "sample_rate": self.samplerate}, return_embeddings=True)
 
     def diarization_pipeline(self):
         self.read_audio_file()
         self.transform_audio()
         self.diarize()
-        vector_db_obj.store_speaker_embedding(self.embeddings)
+        self.vector_store_obj.store_speaker_embedding(self.embeddings)
     
     def get_speakers(self):
         return str(self.speakers).splitlines()
