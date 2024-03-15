@@ -1,5 +1,4 @@
 from common.utils import get_unixtime
-
 from flask import current_app
 
 class TranscribedText:

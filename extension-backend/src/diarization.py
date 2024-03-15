@@ -1,6 +1,5 @@
 from common.utils import get_unixtime
 from flask import current_app
-
 import torch
 import numpy as np
 from scipy.io import wavfile

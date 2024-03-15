@@ -1,12 +1,10 @@
 from database.vector_store import VectorStore
-
 import os
 from flask import current_app
 from dotenv import load_dotenv
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from pinecone import Pinecone
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.llms.openai import OpenAI
 
 class Initialisation:
@@ -20,8 +18,7 @@ class Initialisation:
     def initialise_models(self):
         self.asr_model = WhisperModel("base")
         self.diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", use_auth_token=os.getenv("HF_API"))
-        self.embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        self.llm = OpenAI(openai_api_key=os.getenv("OPENAI_API"))
+        self.llm = OpenAI(temperature=0, model="gpt-4", openai_api_key=os.getenv("OPENAI_API"))
 
 def initialise_objects():
     init_obj = Initialisation()
@@ -33,7 +30,7 @@ def initialise_objects():
     current_app.config["init_obj"] = init_obj
     current_app.config["vector_store_obj"] = vector_store_obj
 
-    vector_store_obj.create_index()
+    vector_store_obj.set_index()
     
 
     

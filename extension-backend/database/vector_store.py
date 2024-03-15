@@ -2,7 +2,7 @@ from flask import current_app
 import numpy as np
 
 class VectorStore():
-    def create_index(self):
+    def set_index(self):
         self.db_audio_index = current_app.config["init_obj"].db_audio.Index("speaker-voices")
         self.db_transcript_index = current_app.config["init_obj"].db_transcript.Index("transcripts")
 
