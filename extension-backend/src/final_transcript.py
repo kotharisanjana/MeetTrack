@@ -1,5 +1,4 @@
 from database.vector_db import get_actual_speaker
-from flask import current_app
 
 def combine_asr_diarization(speaker_segments, transcript_segments):
     l = len(transcript_segments)
@@ -10,7 +9,6 @@ def combine_asr_diarization(speaker_segments, transcript_segments):
     overall_text = "Speaker " + actual_speaker + ":" + transcript_segments[0].text.text
 
     for segment in speaker_segments:
-        # dstime = segment.start_time.unixtime
         detime = segment.end_time.unixtime
         speaker_id = segment.speaker.speaker_id
 
@@ -21,7 +19,6 @@ def combine_asr_diarization(speaker_segments, transcript_segments):
 
         while segment_num<l:
             tstime = transcript_segments[segment_num].start_time.unixtime
-            # tetime = transcript_segments[segment_num].end_time.unixtime
 
             # exact overlap window cannot be found because the diarization and transcription time segments are not consistent and words might overflow into new window
             if tstime <= detime:

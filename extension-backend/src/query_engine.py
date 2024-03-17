@@ -5,7 +5,7 @@ from flask import current_app
 
 class PrevMeetingQueryEngine:
     def get_transcript_prev_meeting(self):
-        self.prev_meeting_transcript = current_app["relational_db_obj"].get_prev_meeting_transcript(current_app.config["init_obj"].MEETING_NAME)
+        self.prev_meeting_transcript = current_app["relational_db_obj"].get_prev_meeting_transcript(current_app.config["meeting_name"])
 
     def create_tool_prev_meeting(self):
         if self.prev_meeting_transcript:
@@ -15,7 +15,7 @@ class PrevMeetingQueryEngine:
 
             self.prev_meeting_query_tool = QueryEngineTool.from_defaults(
                 query_engine=prev_meeting_engine, 
-                name=current_app.config["init_obj"].MEETING_NAME,
+                name=current_app.config["meeting_name"],
                 description=(f"Provides transcripts from previous meetings"),
                 )
         else:
@@ -28,7 +28,7 @@ class PrevMeetingQueryEngine:
 
 class CurrMeetingQueryEngine:
     def get_transcript_curr_meeting(self):
-        self.curr_meeting_transcript = current_app["relational_db_obj"].get_curr_meeting_transcript(current_app.config["init_obj"].MEETING_NAME)
+        self.curr_meeting_transcript = current_app["relational_db_obj"].get_curr_meeting_transcript(current_app.config["meeting_name"])
 
     def create_tool_curr_meeting(self):
         if self.curr_meeting_transcript:
@@ -38,7 +38,7 @@ class CurrMeetingQueryEngine:
 
             self.curr_meeting_query_tool = QueryEngineTool.from_defaults(
                 query_engine=curr_meeting_engine, 
-                name=current_app.config["init_obj"].MEETING_NAME,
+                name=current_app.config["meeting_name"],
                 description=(f"Provides transcripts from current meeting till this point in time"),
                 )
         else:
