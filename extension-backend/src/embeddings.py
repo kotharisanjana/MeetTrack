@@ -1,3 +1,4 @@
+from database.vector_db import insert_actual_speaker_embedding
 import os
 from scipy.io import wavfile
 import torch
@@ -28,6 +29,6 @@ class VoiceEmbeddings:
             self.read_audio_file(audio_file_path)
             self.transform_audio()
             self.create_audio_embedding()
-            current_app.config["vector_db_obj"].insert_actual_speaker_embedding(filename.split(".")[0], self.voice_embedding)
+            insert_actual_speaker_embedding(filename.split(".")[0], self.voice_embedding)
 
 VoiceEmbeddings().actual_audio_embedding_pipeline()

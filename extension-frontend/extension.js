@@ -112,6 +112,7 @@ async function startRecording(streamId) {
       const blob = new Blob(data, { type: "video/webm" });
       const recordingUrl = URL.createObjectURL(blob);
 
+      // CHANGE TO UPLOAD TO S3 BUCKET AND MAINTAIN SEQUENTIAL ORDERING OF FILE NAMES
       const a = document.createElement("a");
       a.style.display = "none";
       document.body.appendChild(a);

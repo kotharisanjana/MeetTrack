@@ -1,4 +1,5 @@
 from common.utils import get_unixtime
+from database.vector_db import insert_identified_speaker_embedding
 from flask import current_app
 import torch
 import numpy as np
@@ -25,7 +26,7 @@ class SpeakerDiarization:
         self.read_audio_file()
         self.transform_audio()
         self.diarize()
-        current_app.config["vector_db_obj"].insert_identified_speaker_embedding(self.embeddings)
+        insert_identified_speaker_embedding(self.embeddings)
     
     def get_speakers(self):
         return str(self.speakers).splitlines()
