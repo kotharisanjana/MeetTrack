@@ -1,6 +1,8 @@
-from init import initialise_objects
+from __init__ import initialise
+from common.utils import get_date
+from database.relational_db import RelationalDb
+from src.query_engine import setup_prev_meeting_query_engine, UserInteraction
 # from src.realtime_audio import RealtimeAudio
-from src.user_query import UserInteraction
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -9,34 +11,41 @@ CORS(app)
 
 # Initialize objects within the Flask application context
 with app.app_context():
-  initialise_objects()
+  initialise()
 
-def setup_prev_meeting_query_engine():
-  user_query_obj = UserInteraction()
-  app.config["query_obj"] = user_query_obj
-  user_query_obj.get_previous_meeting_transcripts()
-  user_query_obj.create_tool_prev_meetings()
-
-@app.route("/details", methods=["POST"])
+@app.route("/meeting_details", methods=["POST"])
 def get_meeting_details():
-  name = request.json.get("name")
-  date = request.json.get("date")
-  app.config["init_obj"].MEETING_NAME = name
-  app.config["init_obj"].MEETING_DATE = date
-  setup_prev_meeting_query_engine()
+  meeting_name = request.json.get("name")
+  meeting_type = request.json.get("meetingType")
+
+  app.config["init_obj"].MEETING_NAME = meeting_name
+  app.config["init_obj"].MEETING_DATE = get_date()
+
+  relational_db_obj = RelationalDb()
+  app.config["relational_db_obj"] = relational_db_obj
+
+  # insert into relational_db
+  relational_db_obj.insert_meeting_info(meeting_type)
+
+  if meeting_type == "recurring":
+    setup_prev_meeting_query_engine()
+
   return jsonify()
 
-@app.route("/record", methods=["POST"])
+@app.route("/record_meeting", methods=["POST"])
 def record_meeting():
   # video_file = "" 
   # audio_file = ""
   # RealtimeAudio(video_file, audio_file).realtime_audio_pipeline()
+  # insert_recording_status()
+
+  # CHECK WHERE TO CALL THE FUNCTION THAT PUTS THE SNIPPET RECORDING PATH INTO POSTGRES ONCE IT IS UPLOADED TO S3 - insert_recording_snippet_path()
   pass
 
-@app.route("/query", methods=["POST"])
+@app.route("/user_query", methods=["POST"])
 def get_query():
   user_query = request.json.get("userInput")
-  response = app.config["query_obj"].query_response_pipeline(user_query)
+  response = UserInteraction.query_response_pipeline(user_query)
   data = {"response": response}
   return jsonify(data)
   

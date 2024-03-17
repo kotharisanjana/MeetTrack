@@ -1,13 +1,15 @@
+from database.vector_db import insert_actual_speaker_embedding
 import os
 from scipy.io import wavfile
 import torch
 import numpy as np
 from flask import current_app
 
+# Runs only once to store voice embeddings of all speakers
+
 class VoiceEmbeddings:
     def read_audio_file(self, audio_file_path):
         self.init_obj = current_app.config["init_obj"]
-        self.vector_store_obj = current_app.config["vector_store_obj"]
         self.samplerate, self.data = wavfile.read(audio_file_path)
 
     def transform_audio(self):
@@ -27,4 +29,6 @@ class VoiceEmbeddings:
             self.read_audio_file(audio_file_path)
             self.transform_audio()
             self.create_audio_embedding()
-            self.vector_store_obj.store_voice_embedding(filename.split(".")[0], self.voice_embedding)
+            insert_actual_speaker_embedding(filename.split(".")[0], self.voice_embedding)
+
+VoiceEmbeddings().actual_audio_embedding_pipeline()

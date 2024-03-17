@@ -2,12 +2,9 @@ from asr import ASR
 from diarization import SpeakerDiarization, SpeakerIDsForTranscription
 from extract_audio import ExtractAudio
 from final_transcript import combine_asr_diarization
-from flask import current_app
 
 class RealtimeAudio:
     def __init__(self, video_file, audio_file):
-        self.init_obj = current_app.config["init_obj"]
-        self.vector_store_obj = current_app.config["vector_store_obj"]
         self.video_file = video_file
         self.audio_file = audio_file
         self.meeting_chunk = 0

@@ -59,10 +59,11 @@
   
   <h3>Enter meeting details</h3>
   <form id="meetingDetailsForm">
-    <input id="meetingName" placeholder="Name">
-    <input id="meetingDate" placeholder="Date in mmddyyyy">
-    <br>
-    <br>
+    <input id="meetingName" placeholder="Name"><br>
+    <input type="radio" id="recurring" name="meetingType" value="recurring">
+    <label for="recurring">Recurring</label>
+    <input type="radio" id="nonRecurring" name="meetingType" value="non_recurring">
+    <label for="nonRecurring">Non-Recurring</label><br><br>
     <button type="submitDetails">Submit</button>
   </form>
 

@@ -81,6 +81,7 @@ def download_file_from_s3(bucket_name, object_key, local_file_path):
         print("Credentials not available")
     except Exception as e:
         print(f"Error downloading file: {e}")
+        
 
 def get_s3_image_bytes(bucket_name, key):
     """

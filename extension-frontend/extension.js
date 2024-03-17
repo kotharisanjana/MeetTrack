@@ -19,14 +19,14 @@ document.addEventListener("DOMContentLoaded", function () {
   meetingDetailsForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var name = document.getElementById('meetingName').value;
-    var date = document.getElementById('meetingDate').value;
+    var meetingType = document.querySelector('input[name="meetingType"]:checked').value;
 
-    fetch("http://localhost:5000/details", {
+    fetch("http://localhost:5000/meeting_details", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ name: name, date: date})
+      body: JSON.stringify({ name: name, meetingType: meetingType})
     })
     .catch(error => console.error("Error:", error));
 
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
     event.preventDefault();
     var userInput = document.getElementById('userInput').value;
 
-    fetch("http://localhost:5000/query", {
+    fetch("http://localhost:5000/user_query", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -112,6 +112,7 @@ async function startRecording(streamId) {
       const blob = new Blob(data, { type: "video/webm" });
       const recordingUrl = URL.createObjectURL(blob);
 
+      // CHANGE TO UPLOAD TO S3 BUCKET AND MAINTAIN SEQUENTIAL ORDERING OF FILE NAMES
       const a = document.createElement("a");
       a.style.display = "none";
       document.body.appendChild(a);
