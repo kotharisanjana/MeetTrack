@@ -8,14 +8,13 @@
     body {
       font-family: "Times New Roman", Times, serif;
       padding: 10px;
-      width: 250px;
-      font-size: 14px;
+      width: 400px;
+      font-size: 16px;
     }
     #header {
       display: flex;
       align-items: center; /* Align items vertically */
     }
-    
     #header img {
       margin-right: 10px; /* Adjust as needed */
     }
@@ -49,6 +48,20 @@
       opacity: 0.5;
       filter: grayscale(100%);
     }
+    .input-container {
+      display: flex;
+      justify-content: space-between; 
+      align-items: flex-start; 
+    }
+    .meetingIDForm input[type="text"] {
+      width: 150px;
+      margin-right: 10px;
+    }
+    .separator {
+      text-align: center;
+      margin-top: 70px;
+      font-size: 20px;
+    }
   </style>
 </head>
 <body>
@@ -56,19 +69,33 @@
     <img src="icon.png" alt="Logo" width="20">
     <h2>MeetTrack</h2>
   </div>
-  
-  <h3>Enter meeting details</h3>
-  <form id="meetingDetailsForm">
-    <input id="meetingName" placeholder="Name"><br>
-    <input type="radio" id="recurring" name="meetingType" value="recurring">
-    <label for="recurring">Recurring</label>
-    <input type="radio" id="nonRecurring" name="meetingType" value="non_recurring">
-    <label for="nonRecurring">Non-Recurring</label><br><br>
-    <button type="submitDetails">Submit</button>
-  </form>
+  <hr>
 
-  <h3>Record your meeting</h3>
-  <button id="toggleButton" class="disabled">Toggle Recording</button>
+  <h3>Enter meeting details</h3>
+  
+  <div class="input-container">
+    <div>
+      <form id="meetingDetailsForm">
+        <input id="meetingName" placeholder="Meeting Name"><br><br>
+        <input type="radio" id="recurring" name="meetingType" value="recurring">
+        <label for="recurring">Recurring</label><br>
+        <input type="radio" id="nonRecurring" name="meetingType" value="non_recurring">
+        <label for="nonRecurring">Non-Recurring</label><br><br>
+        <button type="submitDetails">Submit</button>
+      </form>
+    </div>
+
+    <div class="separator">OR</div>
+
+    <form class="meetingIDForm">
+      <input type="text" id="meetingID" placeholder="Meeting ID"><br><br>
+      <button type="submitMeetingID">Join Session</button>
+    </form>
+  </div>
+
+  <h3>Record meeting</h3>
+  <button id="startRecordingButton" class="disabled">Start</button>
+  <button id="stopRecordingButton" class="disabled">Stop</button>
 
   <h3>Got any questions?</h3>
   <form id="userInputForm" class="disabled">
