@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 import pandas as pd
 from datetime import datetime
 import openai
-from aws_utilities import download_file, upload_frame_to_s3
+from common.aws_utilities import download_file, upload_frame_to_s3
 import csv
 import pinecone
 from pinecone import Pinecone, ServerlessSpec

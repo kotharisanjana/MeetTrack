@@ -5,7 +5,7 @@ from langchain.docstore.document import Document
 from langchain.llms.openai import OpenAI, OpenAIChat
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
-from aws_utilities import  get_s3_image_bytes, download_file_from_s3, upload_file_to_s3
+from common.aws_utilities import  get_s3_image_bytes, download_file_from_s3, upload_file_to_s3
 from image_context import get_images_from_context
 from docx import Document
 from docx.shared import Inches
@@ -115,7 +115,7 @@ def create_doc_with_text_and_images(textual_document, image_keys, bucket_name, s
 def send_email():
     textual_document,image_keys = generate_textual_components()
     create_doc_with_text_and_images(textual_document, image_keys, bucket_name, s3_doc_path)
-    download_file_from_s3(bucket_name, object_key, local_file_path)
+    download_file_from_s3(bucket_name, object_key)
     #email config
     recipient_email = "ananya.joshi@sjsu.edu"
     sender_email = "ananya.joshi@sjsu.edu"

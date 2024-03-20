@@ -1,6 +1,7 @@
 import os
 import psycopg2
 from dotenv import load_dotenv
+import boto3
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from qdrant_client import QdrantClient
@@ -28,11 +29,15 @@ class Initialisation:
         self.diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", use_auth_token=os.getenv("HF_API"))
         self.llm = OpenAI(temperature=0, model="gpt-4", openai_api_key=os.getenv("OPENAI_API"))
 
+    def initialise_boto3_client(self):
+        self.s3_client = boto3.client("s3")
+
 def initialise(app):
     init_obj = Initialisation()
     init_obj.initialise_relational_db()
     init_obj.initialise_vector_db()
     init_obj.initialise_models()
+    init_obj.initialise_boto3_client()
     
     app.config["init_obj"] = init_obj
     

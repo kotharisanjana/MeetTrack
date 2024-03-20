@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var name = document.getElementById('meetingName').value;
     var meetingType = document.querySelector('input[name="meetingType"]:checked').value;
 
-    fetch("http://localhost:5000/submit-meeting-details", {
+    fetch("http://localhost:5000/submit-details", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -122,7 +122,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
 async function startRecording(streamId) {
   try {
     if (recorder && recorder.state === "recording") {
-      alert("Recording is already in progress.");
+      alert("Recording already in progress.");
       return;
     }
 

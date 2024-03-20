@@ -1,44 +1,65 @@
-from database.redis import retrieve_session_data
+from common.aws_utilities import download_file_from_s3
+from database.cache import retrieve_session_data
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, get_response_synthesizer
 from llama_index.core.tools import QueryPlanTool, QueryEngineTool
 from llama_index.agent.openai import OpenAIAgent
+import tempfile
+import os
 
 class PrevMeetingQueryEngine:
     def __init__(self, session_data):
         self.session_data = session_data
 
-    def get_transcript_prev_meeting(self):
-        self.prev_meeting_transcript = self.session_data["relational_db_obj"].get_prev_meeting_transcript(self.session_data["meeting_name"])
+    def get_transcript_path(self):
+        self.transcript_path_list = self.session_data["relational_db_obj"].fetch_prev_transcript_path(self.session_data["meeting_name"])
 
-    def create_tool_prev_meeting(self):
-        if self.prev_meeting_transcript:
-            files = SimpleDirectoryReader(input_files=self.prev_meeting_transcript).load_data()
-            prev_meeting_index = VectorStoreIndex.from_documents(files)
-            prev_meeting_engine = prev_meeting_index.as_query_engine(similarity_top_k=3, llm=self.session_data["init_obj"].llm)
+    def handle_files_from_s3(self):
+        local_transcript_paths = []
 
-            self.prev_meeting_query_tool = QueryEngineTool.from_defaults(
-                query_engine=prev_meeting_engine, 
-                name=self.session_data["meeting_name"],
-                description=(f"Provides transcripts from previous meetings"),
-                )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for transcript_path in self.transcript_path_list:
+                local_file_path = os.path.join(temp_dir, os.path.basename(transcript_path))
+                download_file_from_s3(self.session_data["s3_client"], transcript_path, local_file_path)
+                local_transcript_paths.append(local_file_path)
+
+        return local_transcript_paths
+
+    def create_tool(self):
+        if self.transcript_path_list:
+            local_transcript_paths = self.handle_files_from_s3()
+
+            if len(local_transcript_paths) != 0:
+                files = SimpleDirectoryReader(input_files=local_transcript_paths).load_data()
+                prev_meeting_index = VectorStoreIndex.from_documents(files)
+                prev_meeting_engine = prev_meeting_index.as_query_engine(similarity_top_k=3, llm=self.session_data["init_obj"].llm)
+
+                self.prev_meeting_query_tool = QueryEngineTool.from_defaults(
+                    query_engine=prev_meeting_engine, 
+                    name=self.session_data["meeting_name"],
+                    description=(f"Provides transcripts from previous meetings"),
+                    )
         else:
             self.prev_meeting_query_tool = None
 
-    def prev_meeting_query_engine(self):
-        self.get_transcript_prev_meeting()
-        self.create_tool_prev_meeting()
+    def create_query_engine(self):
+        self.get_transcript_path()
+        self.create_tool()
 
 
 class CurrMeetingQueryEngine:
     def __init__(self, session_id):
         self.session_data = retrieve_session_data(session_id)
 
-    def get_transcript_curr_meeting(self):
-        self.curr_meeting_transcript = self.session_data["relational_db_obj"].get_curr_meeting_transcript()
+    def get_transcript_path(self):
+        self.transcript_path = self.session_data["relational_db_obj"].fetch_curr_transcript_path()
 
-    def create_tool_curr_meeting(self):
-        if self.curr_meeting_transcript:
-            files = SimpleDirectoryReader(input_files=self.curr_meeting_transcript).load_data()
+    def handle_files_from_s3(self):
+        self.transcript = download_file_from_s3(self.session_data["s3_client"], self.transcript_path)
+
+    def create_tool(self):
+        if self.transcript_path:
+            self.handle_files_from_s3()
+            files = SimpleDirectoryReader(input_files=self.transcript).load_data()
             curr_meeting_index = VectorStoreIndex.from_documents(files)
             curr_meeting_engine = curr_meeting_index.as_query_engine(similarity_top_k=3, llm=self.init_obj.llm)
 
@@ -50,9 +71,9 @@ class CurrMeetingQueryEngine:
         else:
             self.curr_meeting_query_tool = None
 
-    def curr_meeting_query_engine(self):
-        self.get_transcript_curr_meeting()
-        self.create_tool_curr_meeting()
+    def create_query_engine(self):
+        self.get_transcript_path()
+        self.create_tool()
 
 
 class UserInteraction(CurrMeetingQueryEngine):   
@@ -60,7 +81,7 @@ class UserInteraction(CurrMeetingQueryEngine):
         super().__init__(session_id)
 
     def create_plan_tool(self):
-        super().curr_meeting_query_engine()
+        super().create_query_engine()
 
         response_synthesizer = get_response_synthesizer()
         
@@ -104,5 +125,5 @@ class UserInteraction(CurrMeetingQueryEngine):
 
 def setup_prev_meeting_query_engine(session_data):
     prev_meeting_query_engine = PrevMeetingQueryEngine(session_data)
-    prev_meeting_query_engine.prev_meeting_query_engine()
+    prev_meeting_query_engine.create_query_engine()
     return prev_meeting_query_engine

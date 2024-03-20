@@ -1,5 +1,7 @@
 from __init__ import initialise
-from database.redis import *
+import common.globals as global_vars
+from common.aws_utilities import *
+from database.cache import *
 from database.relational_db import RelationalDb
 from database.vector_db import VectorDb
 from src.query_engine import UserInteraction, setup_prev_meeting_query_engine
@@ -8,15 +10,14 @@ from flask import Flask, jsonify, request
 from flask_session import Session
 import json
 from flask_cors import CORS
-import os
 
 # Initialize the Flask application
 app = Flask(__name__)
 
 # Set the session mechanism details
-app.config["SESSION_TYPE"] = os.getenv("SESSION_TYPE")
-app.config["SESSION_REDIS"] = os.getenv("SESSION_REDIS")
-app.config["PERMANENT_SESSION_LIFETIME"] = os.getenv("PERMANENT_SESSION_LIFETIME")
+app.config["SESSION_TYPE"] = global_vars.SESSION_TYPE
+app.config["SESSION_REDIS"] = global_vars.SESSION_REDIS
+app.config["PERMANENT_SESSION_LIFETIME"] = global_vars.PERMANENT_SESSION_LIFETIME
 
 # Enable CORS
 CORS(app)
@@ -56,8 +57,8 @@ def on_submit_meeting_details(session_id):
   redis_client.set(session_id, updated_session_json)
 
 
-@app.route("/submit-meeting-details", methods=["POST"])
-def submit_meeting_details():
+@app.route("/submit-details", methods=["POST"])
+def submit_details():
   meeting_name = request.json.get("name")
   meeting_type = request.json.get("meetingType")
 
@@ -86,7 +87,7 @@ def recording_status():
   session_id = request.json.get("session_id")
   session_data = retrieve_session_data(session_id)
 
-  if session_data["relational_db_obj"].get_recording_status():
+  if session_data["relational_db_obj"].fetch_recording_status():
     return jsonify({"error": "Recording already in progress."}), 400
   else:
     session_data["relational_db_obj"].insert_recording_status()
@@ -103,10 +104,12 @@ def process_recording():
 
   session_data = retrieve_session_data(session_id)
   
-  # upload meeting_recording to s3
-  session_data["relational_db_obj"].insert_recording_snippet_path()
+  # upload meeting recording to s3 and store path in relational database
+  recording_path = session_data["relational_db_obj"].insert_recording_path()
+  if recording_path:
+    upload_file_to_s3(session_data["init_obj"].s3_client, meeting_recording, recording_path)
 
-  RealtimeAudio(meeting_recording, session_id, session_data["vector_db_obj"]).realtime_audio_pipeline()  
+  RealtimeAudio(meeting_recording, session_data).realtime_audio_pipeline()  
 
   return jsonify({"success": "Recording processed successfully"}), 200
 

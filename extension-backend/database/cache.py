@@ -1,14 +1,13 @@
 from common.utils import get_date
 from redis import Redis
 import uuid
-from flask import g, current_app
+from flask import current_app
 import json
 
+redis_client = Redis(host="localhost", port=6379, db=0)
+
 def get_redis_client():
-    if "redis_client" not in g:
-        # Initialize a Redis client
-        g.redis_client = Redis(host="localhost", port=6379, db=0)
-    return g.redis_client
+    return redis_client
 
 
 def create_session(meeting_name, meeting_type):
