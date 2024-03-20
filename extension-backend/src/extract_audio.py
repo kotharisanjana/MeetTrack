@@ -1,17 +1,15 @@
 import moviepy.editor as moviepy
 
 class ExtractAudio:
-    def __init__(self, video_file, audio_file):
-        # audio and video file paths in s3
-        self.video_file = video_file
-        self.audio_file = audio_file
+    def __init__(self, meeting_recording):
+        self.meeting_recording = meeting_recording
 
     def extract_audio(self):
-        self.clip = moviepy.VideoFileClip(self.video_file)
+        self.clip = moviepy.VideoFileClip(self.meeting_recording)
 
-    def save_audio(self):
-        self.clip.audio.write_audiofile(self.audio_file)
+    def get_wav_file(self):
+        return self.clip.audio
 
     def video_to_audio_pipeline(self):
         self.extract_audio()
-        self.save_audio()
+        return self.get_wav_file()

@@ -1,54 +1,129 @@
 from __init__ import initialise
-from common.utils import get_date
+from database.redis import *
 from database.relational_db import RelationalDb
-from src.query_engine import setup_prev_meeting_query_engine, UserInteraction
-# from src.realtime_audio import RealtimeAudio
+from database.vector_db import VectorDb
+from src.query_engine import UserInteraction, setup_prev_meeting_query_engine
+from src.realtime_audio import RealtimeAudio
 from flask import Flask, jsonify, request
+from flask_session import Session
+import json
 from flask_cors import CORS
+import os
 
+# Initialize the Flask application
 app = Flask(__name__)
+
+# Set the session mechanism details
+app.config["SESSION_TYPE"] = os.getenv("SESSION_TYPE")
+app.config["SESSION_REDIS"] = os.getenv("SESSION_REDIS")
+app.config["PERMANENT_SESSION_LIFETIME"] = os.getenv("PERMANENT_SESSION_LIFETIME")
+
+# Enable CORS
 CORS(app)
 
-# Initialize objects within the Flask application context
-with app.app_context():
-  initialise()
+# Initialize the session mechanism
+Session(app)
 
-@app.route("/meeting_details", methods=["POST"])
-def get_meeting_details():
+# Initialize other components 
+initialise(app)
+
+# refactor and place in correct file
+def on_submit_meeting_details(session_id):
+  redis_client = get_redis_client()
+  session_data = retrieve_session_data(session_id)
+
+  # initialize vector and relational database objects
+  relational_db_obj = RelationalDb(session_data)
+  vector_db_obj = VectorDb(session_data)
+
+  # generate meeting_id and insert meeting info into relational database
+  relational_db_obj.insert_meeting_info()
+
+  # store database objects in session_data
+  session_data["relational_db_obj"] = relational_db_obj
+  session_data["vector_db_obj"] = vector_db_obj
+  # add meeting_id to session_data
+  session_data["meeting_id"] = relational_db_obj.meeting_id  
+
+  # setup previous meeting query engine
+  if session_data["meeting_type"] == "recurring":
+    prev_meeting_obj = setup_prev_meeting_query_engine(session_data)
+    # store previous_meeting_obj in session_data
+    session_data["prev_meeting_obj"] = prev_meeting_obj
+
+  # update session_data in redis
+  updated_session_json = json.dumps(session_data)
+  redis_client.set(session_id, updated_session_json)
+
+
+@app.route("/submit-meeting-details", methods=["POST"])
+def submit_meeting_details():
   meeting_name = request.json.get("name")
   meeting_type = request.json.get("meetingType")
 
-  app.config["init_obj"].MEETING_NAME = meeting_name
-  app.config["init_obj"].MEETING_DATE = get_date()
+  session_id = get_session_id(meeting_name)
 
-  relational_db_obj = RelationalDb()
-  app.config["relational_db_obj"] = relational_db_obj
-
-  # insert into relational_db
-  relational_db_obj.insert_meeting_info(meeting_type)
-
-  if meeting_type == "recurring":
-    setup_prev_meeting_query_engine()
-
-  return jsonify()
-
-@app.route("/record_meeting", methods=["POST"])
-def record_meeting():
-  # video_file = "" 
-  # audio_file = ""
-  # RealtimeAudio(video_file, audio_file).realtime_audio_pipeline()
-  # insert_recording_status()
-
-  # CHECK WHERE TO CALL THE FUNCTION THAT PUTS THE SNIPPET RECORDING PATH INTO POSTGRES ONCE IT IS UPLOADED TO S3 - insert_recording_snippet_path()
-  pass
-
-@app.route("/user_query", methods=["POST"])
-def get_query():
-  user_query = request.json.get("userInput")
-  response = UserInteraction.query_response_pipeline(user_query)
-  data = {"response": response}
-  return jsonify(data)
+  if session_id is None:
+    session_id = create_session(meeting_name, meeting_type)
+    on_submit_meeting_details(session_id)
   
+  return jsonify({"session_id": session_id, "status": "OK"}), 200
+
+
+@app.route("/access-session", methods=["POST"])
+def access_session():
+  session_id = request.json.get("session_id")
+  if session_id:
+    session_data = retrieve_session_data(session_id)
+    if session_data:
+        return jsonify({"status": "success", "message": "You've joined the meeting session!"}), 200
+  else:
+    return jsonify({"status": "error", "message": "Session ID not provided/ incorrect. Try again"}), 400
+
+
+@app.route("/recording-status", methods=["POST"])
+def recording_status():
+  session_id = request.json.get("session_id")
+  session_data = retrieve_session_data(session_id)
+
+  if session_data["relational_db_obj"].get_recording_status():
+    return jsonify({"error": "Recording already in progress."}), 400
+  else:
+    session_data["relational_db_obj"].insert_recording_status()
+    return jsonify({"success": "Recording started successfuly."}), 200
+  
+
+@app.route("/process-recording", methods=["POST"])
+def process_recording():
+  if "recording" not in request.files:
+    return jsonify({"error": "No recording file provided"}), 400
+  
+  session_id = request.form.get("session_id")
+  meeting_recording = request.files["recording"]
+
+  session_data = retrieve_session_data(session_id)
+  
+  # upload meeting_recording to s3
+  session_data["relational_db_obj"].insert_recording_snippet_path()
+
+  RealtimeAudio(meeting_recording, session_id, session_data["vector_db_obj"]).realtime_audio_pipeline()  
+
+  return jsonify({"success": "Recording processed successfully"}), 200
+
+  
+@app.route("/answer-query", methods=["POST"])
+def answer_query():
+  session_id = request.json.get("session_id")
+  user_query = request.json.get("userInput")
+
+  response = UserInteraction(session_id).query_response_pipeline(user_query)
+
+  if response:
+    data = {"response": response}
+    return jsonify({"status": "success", "data": data}), 200
+  else:
+    return jsonify({"status": "error", "data": "No response found for query. Please try again"}), 400
+
 
 if __name__ == "__main__":
   app.run(debug=True)

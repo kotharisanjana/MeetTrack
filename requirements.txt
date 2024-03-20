@@ -12,6 +12,7 @@ av==11.0.0
 beautifulsoup4==4.12.3
 blinker==1.7.0
 bs4==0.0.2
+cachelib==0.12.0
 certifi==2024.2.2
 cffi==1.16.0
 charset-normalizer==3.3.2
@@ -34,6 +35,7 @@ faster-whisper==1.0.1
 filelock==3.13.1
 flask==3.0.2
 Flask-Cors==4.0.0
+flask-session==0.6.0
 flatbuffers==24.3.7
 fonttools==4.49.0
 frozenlist==1.4.1
@@ -150,6 +152,7 @@ pytorch-metric-learning==2.4.1
 pytz==2024.1
 PyYAML==6.0.1
 qdrant-client==1.8.0
+redis==5.0.3
 regex==2023.12.25
 requests==2.31.0
 rich==13.7.1

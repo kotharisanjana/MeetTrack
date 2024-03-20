@@ -1,21 +1,24 @@
+from database.redis import retrieve_session_data
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, get_response_synthesizer
 from llama_index.core.tools import QueryPlanTool, QueryEngineTool
 from llama_index.agent.openai import OpenAIAgent
-from flask import current_app
 
 class PrevMeetingQueryEngine:
+    def __init__(self, session_data):
+        self.session_data = session_data
+
     def get_transcript_prev_meeting(self):
-        self.prev_meeting_transcript = current_app["relational_db_obj"].get_prev_meeting_transcript(current_app.config["init_obj"].MEETING_NAME)
+        self.prev_meeting_transcript = self.session_data["relational_db_obj"].get_prev_meeting_transcript(self.session_data["meeting_name"])
 
     def create_tool_prev_meeting(self):
         if self.prev_meeting_transcript:
             files = SimpleDirectoryReader(input_files=self.prev_meeting_transcript).load_data()
             prev_meeting_index = VectorStoreIndex.from_documents(files)
-            prev_meeting_engine = prev_meeting_index.as_query_engine(similarity_top_k=3, llm=current_app.config["init_obj"].llm)
+            prev_meeting_engine = prev_meeting_index.as_query_engine(similarity_top_k=3, llm=self.session_data["init_obj"].llm)
 
             self.prev_meeting_query_tool = QueryEngineTool.from_defaults(
                 query_engine=prev_meeting_engine, 
-                name=current_app.config["init_obj"].MEETING_NAME,
+                name=self.session_data["meeting_name"],
                 description=(f"Provides transcripts from previous meetings"),
                 )
         else:
@@ -27,8 +30,11 @@ class PrevMeetingQueryEngine:
 
 
 class CurrMeetingQueryEngine:
+    def __init__(self, session_id):
+        self.session_data = retrieve_session_data(session_id)
+
     def get_transcript_curr_meeting(self):
-        self.curr_meeting_transcript = current_app["relational_db_obj"].get_curr_meeting_transcript(current_app.config["init_obj"].MEETING_NAME)
+        self.curr_meeting_transcript = self.session_data["relational_db_obj"].get_curr_meeting_transcript()
 
     def create_tool_curr_meeting(self):
         if self.curr_meeting_transcript:
@@ -38,7 +44,7 @@ class CurrMeetingQueryEngine:
 
             self.curr_meeting_query_tool = QueryEngineTool.from_defaults(
                 query_engine=curr_meeting_engine, 
-                name=current_app.config["init_obj"].MEETING_NAME,
+                name=self.session_data["meeting_name"],
                 description=(f"Provides transcripts from current meeting till this point in time"),
                 )
         else:
@@ -50,18 +56,18 @@ class CurrMeetingQueryEngine:
 
 
 class UserInteraction(CurrMeetingQueryEngine):   
-    def __init__(self):
-        super().__init__()
+    def __init__(self, session_id):
+        super().__init__(session_id)
 
     def create_plan_tool(self):
         super().curr_meeting_query_engine()
 
         response_synthesizer = get_response_synthesizer()
         
-        if current_app.config["prev_meeting_obj"].prev_meeting_query_tool and self.curr_meeting_query_tool:
-            tools = [current_app.config["prev_meeting_obj"].prev_meeting_query_tool, self.curr_meeting_query_tool]
-        elif current_app.config["prev_meeting_obj"].prev_meeting_query_tool:
-            tools = [current_app.config["prev_meeting_obj"].prev_meeting_query_tool]
+        if self.session_data["prev_meeting_obj"].prev_meeting_query_tool and self.curr_meeting_query_tool:
+            tools = [self.session_data["prev_meeting_obj"].prev_meeting_query_tool, self.curr_meeting_query_tool]
+        elif self.session_data["prev_meeting_obj"].prev_meeting_query_tool:
+            tools = [self.session_data["prev_meeting_obj"].prev_meeting_query_tool]
         elif self.curr_meeting_query_tool:
             tools = [self.curr_meeting_query_tool]
         else:
@@ -79,7 +85,7 @@ class UserInteraction(CurrMeetingQueryEngine):
         self.agent = OpenAIAgent.from_tools(
             [self.query_plan_tool],
             max_function_calls=2,
-            llm=current_app.config["init_obj"].llm,
+            llm=self.session_data["init_obj"].llm,
             verbose=True,
         )
 
@@ -93,10 +99,10 @@ class UserInteraction(CurrMeetingQueryEngine):
             self.create_agent()
             return self.get_response(user_query)
         else:
-            return "No transcripts available for querying"
+            return None
 
 
-def setup_prev_meeting_query_engine():
-    prev_meeting_query_engine = PrevMeetingQueryEngine()
+def setup_prev_meeting_query_engine(session_data):
+    prev_meeting_query_engine = PrevMeetingQueryEngine(session_data)
     prev_meeting_query_engine.prev_meeting_query_engine()
-    current_app.config["prev_meeting_obj"] = prev_meeting_query_engine
+    return prev_meeting_query_engine
