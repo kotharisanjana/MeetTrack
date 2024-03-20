@@ -1,16 +1,16 @@
 from common.utils import get_unixtime
-from database.vector_db import insert_identified_speaker_embedding
-from flask import current_app
+from database.redis import retrieve_session_data
 import torch
 import numpy as np
 from scipy.io import wavfile
 
 class SpeakerDiarization:
-    def __init__(self, audio_file_path):
-        self.audio_file_path = audio_file_path
+    def __init__(self, meeting_audio, session_id):
+        self.meeting_audio = meeting_audio
+        self.session_data = retrieve_session_data(session_id)
 
-    def read_audio_file(self):
-        self.samplerate, self.data = wavfile.read(self.audio_file_path)
+    def read_meeting_audio(self):
+        self.samplerate, self.data = wavfile.read(self.meeting_audio)
 
     def transform_audio(self):
     # audio needs to be converted from stereo to mono
@@ -20,13 +20,13 @@ class SpeakerDiarization:
         self.tensor_data = torch.tensor(self.data).float().unsqueeze(0)
 
     def diarize(self):
-        self.speakers, self.embeddings = current_app.config["init_obj"].pipeline({"waveform": self.tensor_data, "sample_rate": self.samplerate}, return_embeddings=True)
+        self.speakers, self.embeddings = self.session_data["init_obj"].pipeline({"waveform": self.tensor_data, "sample_rate": self.samplerate}, return_embeddings=True)
 
     def diarization_pipeline(self):
-        self.read_audio_file()
+        self.read_meeting_audio()
         self.transform_audio()
         self.diarize()
-        insert_identified_speaker_embedding(self.embeddings)
+        self.session_data["vector_db_obj"].insert_identified_speaker_embedding(self.embeddings)
     
     def get_speakers(self):
         return str(self.speakers).splitlines()
@@ -36,11 +36,13 @@ class Speaker:
     def __init__(self, speaker_id):
         self.speaker_id = speaker_id
 
+
 class SpeakerIdentification:
     def __init__(self, start_time, end_time, speaker):
         self.start_time = start_time
         self.end_time = end_time
         self.speaker = speaker
+        
 
 class SpeakerIDsForTranscription:
     def __init__(self, diarization):

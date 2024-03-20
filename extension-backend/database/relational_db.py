@@ -1,31 +1,29 @@
-import common.globals as g
-from common.utils import get_date
-from flask import current_app
+import common.globals as global_vars
 import psycopg2
+import uuid
 
 class RelationalDb:
-    def __init__(self):
-        self.conn_cur = current_app["init_obj"].conn_cursor
-        self.meeting_name = current_app["meeting_name"]
-        self.meeting_id = current_app["meeting_id"]
-        self.meeting_date = get_date()
-        self.meeting_identifier = f"{self.meeting_id}_{self.meeting_date}/"
+    def __init__(self, session_data):
+        self.session_data = session_data
+        self.conn_cur = session_data["init_obj"].conn_cursor
 
-    def insert_meeting_info(self, meeting_type):
+    def insert_meeting_info(self):
         '''
         Inserts meeting details into relational database
         '''
         
-        is_recurring = meeting_type == "recurring"
-
-        s3_path = f"{g.S3_BUCKET}/{self.meeting_identifier}"
+        self.meeting_id = str(uuid.uuid4())
+        self.meeting_identifier = f"{self.meeting_id}_{self.session_data["meeting_date"]}/"
+        
+        is_recurring = self.session_data["meeting_type"] == "recurring"
+        s3_path = f"{global_vars.S3_BUCKET}/{self.meeting_identifier}"
         transcript_path = f"{self.meeting_identifier}/transcript.txt"
         output_path = f"{self.meeting_identifier}/output.txt"
 
         try:
-            sql = "INSERT INTO meeting_details(meeting_name, meeting_date, is_recurring, s3_path, transcript_path, output_path) \
-                    VALUES (%s, %s, %s, %s, %s, %s);"
-            values = (self.meeting_name, self.meeting_date, is_recurring, s3_path, transcript_path, output_path)
+            sql = "INSERT INTO meeting_details(session_id, meeting_id, meeting_name, meeting_date, is_recurring, s3_path, transcript_path, output_path) \
+                    VALUES (%s %s, %s, %s, %s, %s, %s %s);"
+            values = (self.session_data["session_id"], self.meeting_id, self.session_data["meeting_name"], self.session_data["meeting_date"], is_recurring, s3_path, transcript_path, output_path)
             
             self.conn_cur.execute(sql, values)
             self.conn_cur.commit()
@@ -65,7 +63,7 @@ class RelationalDb:
         Inserts recording snippet path into relational database
         '''
 
-        global_recording_snippet_index = g.RECORDING_SNIPPET_GLOBAL_INDEX
+        global_recording_snippet_index = global_vars.RECORDING_SNIPPET_GLOBAL_INDEX
         snippet_path = f"{self.meeting_identifier}/snippet_{global_recording_snippet_index}.webm"
 
         try:
@@ -75,7 +73,7 @@ class RelationalDb:
             self.conn_cur.execute(sql, values)
             self.conn_cur.commit()
             
-            g.RECORDING_SNIPPET_GLOBAL_INDEX = global_recording_snippet_index + 1
+            global_vars.RECORDING_SNIPPET_GLOBAL_INDEX = global_recording_snippet_index + 1
         except (Exception, psycopg2.DatabaseError) as error:
             print("Insert into recordings table failed", error)
 
@@ -84,7 +82,7 @@ class RelationalDb:
         Inserts image info into relational database
         '''
 
-        global_image_index = g.IMAGE_GLOBAL_INDEX
+        global_image_index = global_vars.IMAGE_GLOBAL_INDEX
         image_path = f"{self.meeting_identifier}/image_{global_image_index}.png"
 
         try:
@@ -94,7 +92,7 @@ class RelationalDb:
             self.conn_cur.execute(sql, values)
             self.conn_cur.commit()
             
-            g.IMAGE_GLOBAL_INDEX = global_image_index + 1
+            global_vars.IMAGE_GLOBAL_INDEX = global_image_index + 1
         except (Exception, psycopg2.DatabaseError) as error:    
             print("Insert into images table failed", error)
 
@@ -104,7 +102,7 @@ class RelationalDb:
         '''
         try:
             sql = "SELECT transcript_path from meeting_details WHERE meeting_name=%s;"
-            self.conn_cur.execute(sql, (self.meeting_name))
+            self.conn_cur.execute(sql, (self.session_data["meeting_name"]))
             
             transcript_paths = [row[0] for row in self.conn_cur.fetchall()]
             return transcript_paths

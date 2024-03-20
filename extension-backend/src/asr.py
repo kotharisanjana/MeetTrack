@@ -1,5 +1,5 @@
 from common.utils import get_unixtime
-from flask import current_app
+from database.redis import retrieve_session_data
 
 class TranscribedText:
   def __init__(self, text):
@@ -12,11 +12,12 @@ class Transcription:
     self.text = text 
 
 class ASR:
-  def __init__(self, audio_file_path):
-    self.audio_file_path = audio_file_path
+  def __init__(self, meeting_audio, session_id):
+    self.meeting_audio = meeting_audio
+    self.session_data = retrieve_session_data(session_id)
 
   def transcribe(self):
-    self.segments, _ = current_app.config["init_obj"].asr_model.transcribe(audio=self.audio_file_path, word_timestamps=True)
+    self.segments, _ = self.session_data["init_obj"].asr_model.transcribe(audio=self.meeting_audio, word_timestamps=True)
 
   def extract_time(self, time):
     time_str = str(time)

@@ -7,22 +7,11 @@ let media = null;
 
 document.addEventListener("DOMContentLoaded", function () {
   var meetingDetailsForm = document.getElementById("meetingDetailsForm");
-  var meetingIDForm = document.querySelector('.meetingIDForm');
+  var sessionIDForm = document.querySelector('.sessionIDForm');
   var startRecordingButton = document.getElementById("startRecordingButton");
   var stopRecordingButton = document.getElementById("stopRecordingButton");
   var userInputForm = document.getElementById("userInputForm");
-   
-  startRecordingButton.addEventListener("click", function () {
-    chrome.runtime.sendMessage({
-      type: "start-recording",
-    });
-  });
 
-  stopRecordingButton.addEventListener("click", function () {
-    chrome.runtime.sendMessage({
-      type: "stop-recording",
-    });
-  });
 
   meetingDetailsForm.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -38,58 +27,75 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .then(response => response.json())
     .then(data => {
-      if (data.meeting_id) {
-        var confirmation = confirm("Meeting ID: " + data.meeting_id + "\nClick OK to start the meeting session.");
-      } else {
-        var confirmation = confirm(data.error);
+      if (data.status === "OK") {
+        alert("Session ID: " + data.session_id);
       } 
-
-      if (confirmation) {
-        startMeetingSession()
-      }
     })
     .catch(error => console.error("Error:", error));
 
     meetingDetailsForm.classList.add("disabled");
-    startRecordingButton.classList.remove("disabled");
-    stopRecordingButton.classList.remove("disabled");
-    userInputForm.classList.remove("disabled");
   });
 
-  meetingIDForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-    var meeting_id = document.getElementById('meetingID').value;
 
-    fetch("http://localhost:5000/join-meeting-session", {
+  sessionIDForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var session_id = document.getElementById('sessionID').value;
+
+    fetch("http://localhost:5000/access-session", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ meeting_id: meeting_id})
+      body: JSON.stringify({ session_id: session_id})
     })
-    .then(response => response.json())
+    .then(response => {
+      if (response.status === 200) {
+          alert(response.message);
+          localStorage.setItem("session_id", session_id);
+
+          sessionIDForm.classList.add("disabled");
+          startRecordingButton.classList.remove("disabled");
+          stopRecordingButton.classList.remove("disabled");
+          userInputForm.classList.remove("disabled");
+      }
+      else if (response.status === 400) {
+          alert(response.message);
+      }
+    })
     .then(data => {
     })
     .catch(error => console.error("Error:", error));
+  });
 
-    meetingDetailsForm.classList.add("disabled");
-    startRecordingButton.classList.remove("disabled");
-    stopRecordingButton.classList.remove("disabled");
-    userInputForm.classList.remove("disabled");
-    meetingIDForm.classList.add("disabled");
+
+  startRecordingButton.addEventListener("click", function () {
+    chrome.runtime.sendMessage({
+      type: "start-recording",
+    });
+  });
+
+
+  stopRecordingButton.addEventListener("click", function () {
+    chrome.runtime.sendMessage({
+      type: "stop-recording",
+    });
   });
 
 
   userInputForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var userInput = document.getElementById('userInput').value;
+    session_id = localStorage.getItem("session_id");
 
-    fetch("http://localhost:5000/answer-user-query", {
+    fetch("http://localhost:5000/answer-query", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ userInput: userInput })
+      body: JSON.stringify({ 
+        userInput: userInput,
+        session_id: session_id
+      })
     })
     .then(response => response.json())
     .then(data => {
@@ -98,20 +104,6 @@ document.addEventListener("DOMContentLoaded", function () {
     .catch(error => console.error("Error:", error));
   });
 });
-
-function startMeetingSession() {
-  // Make a request to the Flask server to start the meeting session
-  fetch("http://localhost:5000/start-meeting-session", {
-      method: "POST",
-      headers: {
-          "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ /* Include any necessary data */ })
-  })
-  .then(response => {
-  })
-  .catch(error => console.error("Error:", error));
-}
 
 
 chrome.runtime.onMessage.addListener(async (message) => {
@@ -129,15 +121,20 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
 async function startRecording(streamId) {
   try {
-    // Check if a recording is already in progress - for the user who starts the recording but we are disbaling the button so may be redundant
     if (recorder && recorder.state === "recording") {
       alert("Recording is already in progress.");
       return;
     }
 
-    // Check if the meeting is already being recorded and prevent uother users from satrting a new recording
-    const recordingStatusResponse = await fetch("http://localhost:5000/meeting-recording-status", {
-      method: "POST"
+    session_id = localStorage.getItem("session_id");
+
+    // Check if the meeting is already being recorded and prevent other users from starting a new recording
+    const recordingStatusResponse = await fetch("http://localhost:5000/recording-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ session_id: session_id })
     });
 
     if (recordingStatusResponse.status === 200) {
@@ -182,8 +179,9 @@ async function startRecording(streamId) {
         try {
           const formData = new FormData();
           formData.append("recording", blob);
+          formData.append("session_id", session_id);
 
-          await fetch("http://localhost:5000/process-meeting-recording", {
+          await fetch("http://localhost:5000/process-recording", {
               method: "POST",
               body: formData
           })
@@ -192,7 +190,7 @@ async function startRecording(streamId) {
                 console.log("Meeting recording processed successfully.");
             } else
             if (response.status === 400) {
-                alert("Error in processing meeting recording.");
+                alert("Error in recording.");
             } else {
                 throw new Error("Unexpected response status: " + response.status);
             }
