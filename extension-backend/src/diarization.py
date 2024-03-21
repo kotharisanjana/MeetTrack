@@ -1,13 +1,13 @@
 from common.utils import get_unixtime
-from database.redis import retrieve_session_data
+from __init__ import diarization_pipeline
+from database.vector_db import insert_identified_speaker_embedding
 import torch
 import numpy as np
 from scipy.io import wavfile
 
 class SpeakerDiarization:
-    def __init__(self, meeting_audio, session_id):
+    def __init__(self, meeting_audio):
         self.meeting_audio = meeting_audio
-        self.session_data = retrieve_session_data(session_id)
 
     def read_meeting_audio(self):
         self.samplerate, self.data = wavfile.read(self.meeting_audio)
@@ -20,13 +20,13 @@ class SpeakerDiarization:
         self.tensor_data = torch.tensor(self.data).float().unsqueeze(0)
 
     def diarize(self):
-        self.speakers, self.embeddings = self.session_data["init_obj"].pipeline({"waveform": self.tensor_data, "sample_rate": self.samplerate}, return_embeddings=True)
+        self.speakers, self.embeddings = diarization_pipeline({"waveform": self.tensor_data, "sample_rate": self.samplerate}, return_embeddings=True)
 
     def diarization_pipeline(self):
         self.read_meeting_audio()
         self.transform_audio()
         self.diarize()
-        self.session_data["vector_db_obj"].insert_identified_speaker_embedding(self.embeddings)
+        insert_identified_speaker_embedding(self.embeddings)
     
     def get_speakers(self):
         return str(self.speakers).splitlines()

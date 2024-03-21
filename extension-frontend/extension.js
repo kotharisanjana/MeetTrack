@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var startRecordingButton = document.getElementById("startRecordingButton");
   var stopRecordingButton = document.getElementById("stopRecordingButton");
   var userInputForm = document.getElementById("userInputForm");
-
+  var emailIDForm = document.getElementById("emailIDForm")
 
   meetingDetailsForm.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -62,6 +62,25 @@ document.addEventListener("DOMContentLoaded", function () {
           alert(response.message);
       }
     })
+    .then(data => {
+    })
+    .catch(error => console.error("Error:", error));
+  });
+
+
+  emailIDForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var email = document.getElementById('emailID').value;
+    session_id = localStorage.getItem("session_id")
+
+    fetch("http://localhost:5000/submit-recipient-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ session_id: session_id, email: email })
+    })
+    .then(response => response.json())
     .then(data => {
     })
     .catch(error => console.error("Error:", error));

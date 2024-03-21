@@ -7,3 +7,6 @@ def get_unixtime(hour=0, minute=0, second=0, millisecond=0):
 
 def get_date():
     return date.today()
+
+def get_intervals(i):
+    return str(datetime.utcfromtimestamp(i).strftime('%H-%M-%S'))
