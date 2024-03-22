@@ -34,6 +34,8 @@ def on_submit_meeting_details(session_id):
   session_data = retrieve_session_data(session_id)
 
   insert_meeting_info(session_data)
+  meeting_id = fetch_meeting_id(session_data["session_id"])
+  insert_s3_paths(meeting_id)
 
   # setup previous meeting query engine
   if session_data["meeting_type"] == "recurring":
@@ -41,7 +43,7 @@ def on_submit_meeting_details(session_id):
 
    # update session_data in redis
   session_data["prev_meeting_tool"] = prev_meeting_tool
-  session_data["meeting_id"] = fetch_meeting_id(session_id) 
+  session_data["meeting_id"] = meeting_id 
   updated_session_json = json.dumps(session_data)
   redis_client.set(session_id, updated_session_json)
 
@@ -75,18 +77,21 @@ def access_session():
 def submit_recipient_email():
   email = request.json.get("email")
   session_id = request.json.get("session_id")
-  insert_email(session_id, email)
+  meeting_id = retrieve_session_data(session_id)["meeting_id"]
+
+  insert_email(meeting_id, email)
   return jsonify({"status": "success", "message": "Recipient email submitted successfully"}), 200
 
 
 @app.route("/recording-status", methods=["POST"])
 def recording_status():
   session_id = request.json.get("session_id")
+  meeting_id = fetch_meeting_id(session_id)["meeting_id"]
 
-  if fetch_recording_status(session_id):
+  if fetch_recording_status(meeting_id):
     return jsonify({"error": "Recording already in progress."}), 400
   else:
-    insert_recording_status(session_id)
+    insert_recording_status(meeting_id)
     return jsonify({"success": "Recording started successfuly."}), 200
   
 
@@ -96,11 +101,11 @@ def process_recording():
     return jsonify({"error": "No recording file provided"}), 400
   
   session_id = request.form.get("session_id")
-  meeting_date = retrieve_session_data(session_id)["meeting_date"]
+  meeting_id = retrieve_session_data(session_id)["meeting_id"]
   meeting_recording = request.files["recording"]
   
   # upload meeting recording to s3 and store path in relational database
-  recording_path = insert_recording_path(session_id, meeting_date)
+  recording_path = insert_recording_path(meeting_id)
   if recording_path:
     upload_file_to_s3(meeting_recording, recording_path)
 
@@ -118,7 +123,7 @@ def answer_query():
   meeting_name = session_data["meeting_name"]
   prev_meeting_tool = session_data["prev_meeting_tool"]
 
-  response = UserInteraction(session_id, meeting_name).query_response_pipeline(user_query, prev_meeting_tool)
+  response = UserInteraction(session_data["meeting_id"], meeting_name).query_response_pipeline(user_query, prev_meeting_tool)
 
   if response:
     data = {"response": response}
@@ -134,11 +139,12 @@ def processing_after_tab_close():
   session_data = retrieve_session_data(session_id)
   meeting_name = session_data["meeting_name"]
   meeting_date = session_data["meeting_date"]
+  meeting_id = session_data["meeting_id"]
 
-  recipient_email = fetch_email(session_id)
+  recipient_email = fetch_email(meeting_id)
   
-  textual_component = TextualComponent(session_id).textual_component_pipeline()
-  output_path = fetch_output_path(session_id)
+  textual_component = TextualComponent().textual_component_pipeline(meeting_id)
+  output_path = fetch_output_path(meeting_id)
   create_final_doc(textual_component, image_keys, output_path)
   send_email(output_path, local_file_path, recipient_email, meeting_name, meeting_date)
   pass

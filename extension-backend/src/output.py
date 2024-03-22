@@ -1,5 +1,4 @@
 from common.aws_utilities import get_s3_image_bytes, upload_file_to_s3
-from database.relational_db import fetch_output_path
 from docx import Document
 from docx.shared import Inches
 from io import BytesIO

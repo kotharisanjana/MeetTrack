@@ -51,15 +51,15 @@ class PrevMeetingQueryEngine:
 
 
 class CurrMeetingQueryEngine:
-    def __init__(self, session_id, meeting_name):
-        self.session_id = session_id
+    def __init__(self, meeting_id, meeting_name):
+        self.meeting_id = meeting_id
         self.meeting_name = meeting_name
 
     def get_transcript_path(self):
-        self.transcript_path = fetch_curr_transcript_path(self.session_id)
+        self.transcript_path = fetch_curr_transcript_path(self.meeting_id)
 
     def handle_files_from_s3(self):
-        self.transcript = download_file_from_s3(self.transcript_path)
+        self.transcript = download_textfile_from_s3(self.transcript_path)
 
     def create_tool(self):
         if self.transcript_path:
@@ -82,8 +82,8 @@ class CurrMeetingQueryEngine:
 
 
 class UserInteraction(CurrMeetingQueryEngine):   
-    def __init__(self, session_id, meeting_name, prev_meeting_tool):
-        super().__init__(session_id, meeting_name)
+    def __init__(self, meeting_id, meeting_name, prev_meeting_tool):
+        super().__init__(meeting_id, meeting_name)
         self.prev_meeting_tool = prev_meeting_tool
 
     def create_plan_tool(self):

@@ -7,8 +7,8 @@ from database.relational_db import fetch_curr_transcript_path
 from __init__ import llm_chat
 
 class TextualComponent:
-    def get_meeting_transcript(self, session_id):
-        transcript_path = fetch_curr_transcript_path(session_id)
+    def get_meeting_transcript(self, meeting_id):
+        transcript_path = fetch_curr_transcript_path(meeting_id)
         self.transcript_str = download_textfile_from_s3(transcript_path)
 
     def create_document_from_transcript(self):
@@ -75,7 +75,7 @@ class TextualComponent:
         return textual_component
 
 
-    def textual_component_pipeline(self):
-        self.get_meeting_transcript()
+    def textual_component_pipeline(self, meeting_id):
+        self.get_meeting_transcript(meeting_id)
         self.create_document_from_transcript()
         return self.generate_textual_component()
