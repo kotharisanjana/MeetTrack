@@ -11,8 +11,8 @@ def send_email(object_key, local_file_path, recipient_email, meeting_name, meeti
 
     #email config
     recipient_email = recipient_email
-    sender_email = global_vars.SENDER_EMAIL
-    sender_password = global_vars.SENDER_PASSWORD
+    sender_email = os.getenv("SENDER_EMAIL")
+    sender_password = os.getenv("SENDER_PASSWORD")
     subject = f"Meeting Notes from {meeting_name} on {meeting_date}"
     body = "Please find attached meeting notes from the meeting"
 

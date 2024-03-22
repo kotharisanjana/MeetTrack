@@ -25,8 +25,8 @@ def insert_s3_paths(meeting_id):
     Inserts S3 paths into relational database
     '''
     try:
-        transcript_path = f"{meeting_id}_/transcript.txt"
-        output_path = f"{meeting_id}_/output.docx"
+        transcript_path = f"{global_vars.TRANSCRIPTION_FOLDER}/{meeting_id}/transcript.txt"
+        output_path = f"{global_vars.OUTPUT_FOLDER}/{meeting_id}/output.docx"
         sql = "INSERT INTO s3_paths(meeting_id, transcript_path, output_path) VALUES (%s, %s, %s);"
         values = (meeting_id, transcript_path, output_path)
         conn_cursor.execute(sql, values)
@@ -66,7 +66,7 @@ def insert_recording_path(meeting_id):
     global_recording_index = str(global_vars.RECORDING_GLOBAL_INDEX)
 
     try:
-        recording_path = f"{meeting_id}_/snippet_{global_recording_index}.webm"
+        recording_path = f"{global_vars.RECORDINGS_FOLDER}/{meeting_id}/snippet_{global_recording_index}.webm"
 
         sql = "INSERT INTO recordings(meeting_id, recording_path) VALUES (%s, %s);"
         values = (meeting_id, recording_path)
@@ -84,7 +84,7 @@ def insert_image_path(meeting_id, image_identifier):
     Inserts image path into relational database
     '''
     try:
-        image_path = f"{meeting_id}_/{image_identifier}"
+        image_path = f"{global_vars.SCREENSHOTS_FOLDER}/{meeting_id}/{image_identifier}"
 
         sql = "INSERT INTO images(meeting_id, image_path) VALUES (%s, %s);"
         values = (meeting_id, image_path)

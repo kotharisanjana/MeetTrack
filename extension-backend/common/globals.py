@@ -4,7 +4,8 @@ SESSION_TYPE = "redis"
 REDIS_SESSION = "redis://localhost:6379/0"
 PERMANENT_SESSION_LIFETIME = 7200 
 
-S3_BUCKET = ""
-
-SENDER_EMAIL = ""
-SENDER_PASSWORD = ""
+S3_BUCKET = "meet-track-storage"
+RECORDINGS_FOLDER = "recordings"
+SCREENSHOTS_FOLDER = "screenshots"
+TRANSCRIPTION_FOLDER = "transcription"
+OUTPUT_FOLDER = "finaldocument"

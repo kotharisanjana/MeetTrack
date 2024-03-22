@@ -4,7 +4,10 @@ from io import BytesIO
 from PIL import Image
 from botocore.exceptions import NoCredentialsError
 
-def upload_frame_to_s3(frame, object_name):
+
+# ------------------- Uploads -------------------
+
+def upload_frame_to_s3(object, object_key):
     """
     Upload a single frame to S3 bucket.
 
@@ -13,31 +16,20 @@ def upload_frame_to_s3(frame, object_name):
     :param object_name: Object name in S3.
     """
     # Convert the numpy frame to an image in memory
-    img = Image.fromarray(frame)
+    img = Image.fromarray(object)
     buffer = BytesIO()
     img.save(buffer, format="PNG") 
     buffer.seek(0)
     # Upload the image to S3
-    s3_client.upload_fileobj(buffer, global_vars.S3_BUCKET, object_name)
-
-
-def get_s3_image_bytes(key):
-    """
-    Fetch an image from an S3 bucket.
-    
-    :param bucket_name: Name of the S3 bucket
-    :param key: Key (path) of the image within the bucket
-    :return: Image bytes
-    """
-    response = s3_client.get_object(Bucket=global_vars.S3_BUCKET, Key=key)
-    return response['Body'].read()
+    s3_client.upload_fileobj(buffer, global_vars.S3_BUCKET, object_key)
 
 
 def upload_file_to_s3(object, object_key):
     """
     Upload a file to an S3 bucket.
 
-    :param file: File to upload.
+    :param object: File to upload.
+    :param object_key: Key of the object in the bucket.
     :return: True if file was uploaded, else False.
     """
     try:
@@ -50,6 +42,19 @@ def upload_file_to_s3(object, object_key):
     except Exception as e:
         print(f"Upload failed: {e}")
         return False
+
+# ------------------- Downloads -------------------
+    
+def get_s3_image_bytes(object_key):
+    """
+    Fetch an image from an S3 bucket.
+    
+    :param bucket_name: Name of the S3 bucket
+    :param key: Key (path) of the image within the bucket
+    :return: Image bytes
+    """
+    response = s3_client.get_object(Bucket=global_vars.S3_BUCKET, Key=object_key)
+    return response['Body'].read()
 
 
 def download_file_from_s3(object_key, local_file_path):
