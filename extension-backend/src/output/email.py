@@ -1,5 +1,4 @@
 from common.aws_utilities import download_file_from_s3
-import common.globals as global_vars
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText

@@ -1,7 +1,7 @@
-from src.asr import ASR
-from src.diarization import SpeakerDiarization, SpeakerIDsForTranscription
-from src.video_processing import VideoProcessing
-from src.transcript import combine_asr_diarization
+from src.audio_to_text.asr import ASR
+from src.audio_to_text.diarization import SpeakerDiarization, SpeakerIDsForTranscription
+from src.visual.video_processing import VideoProcessing
+from src.audio_to_text.transcript import combine_asr_diarization
 from common.aws_utilities import upload_file_to_s3, download_textfile_from_s3
 from database.vector_db import fetch_curr_transcript_path
 

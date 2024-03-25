@@ -1,5 +1,4 @@
 from __init__ import llm_vision
-from tqdm.auto import tqdm
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 
