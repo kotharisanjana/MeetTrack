@@ -6,7 +6,7 @@ import numpy as np
 from flask import g
 
 # Runs only once to store voice embeddings of all speakers
-# replace g.session_id with session_id
+# download from s3 and store embeddings in qdrant and run just once
 
 class VoiceEmbeddings:
     def read_audio_file(self, audio_file_path):
