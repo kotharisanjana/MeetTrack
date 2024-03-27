@@ -5,9 +5,12 @@ import boto3
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from qdrant_client import QdrantClient
-from langchain.llms.openai import OpenAI, OpenAIChat
+from langchain_openai import OpenAI, ChatOpenAI
+import openai
 
 load_dotenv()
+
+openai.api_key = os.getenv("OPENAI_API")
 
 conn = psycopg2.connect(dbname=os.getenv("RELATIONAL_DB_NAME"), 
                         user=os.getenv("RELATIONAL_DB_USERNAME"), 
@@ -15,7 +18,14 @@ conn = psycopg2.connect(dbname=os.getenv("RELATIONAL_DB_NAME"),
                         host=os.getenv("RELATIONAL_DB_HOST"), 
                         port=os.getenv("RELATIONAL_DB_PORT"), 
                         )
-conn_cursor = conn.cursor()
+#conn_cursor = conn.cursor()
+
+try:
+    conn_cursor = conn.cursor()
+    conn_cursor.execute("SELECT 1")
+    print("Connection established successfully.")
+except psycopg2.Error as e:
+    print(f"Connection failed: {e}")
 
 vector_db_client = QdrantClient(url=os.getenv("VECTOR_DB_URL"), 
                                 api_key=os.getenv("VECTOR_DB_API")
@@ -31,7 +41,7 @@ llm = OpenAI(model="gpt-4",
              temperature=0,
              )
 
-llm_chat = OpenAIChat(model="gpt-3.5-turbo",
+llm_chat = ChatOpenAI(model_name="gpt-3.5-turbo",
                       openai_api_key=os.getenv("OPENAI_API"),
                       temperature=0
                       )
@@ -44,4 +54,5 @@ s3_client = boto3.client("s3",
                          aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
                          aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
                          )
+
     

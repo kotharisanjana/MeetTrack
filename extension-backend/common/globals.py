@@ -9,3 +9,5 @@ RECORDINGS_FOLDER = "recordings"
 SCREENSHOTS_FOLDER = "screenshots"
 TRANSCRIPTION_FOLDER = "transcription"
 OUTPUT_FOLDER = "finaldocument"
+
+DOWNLOAD_DIR = "/home/sanjana/Desktop/Masters_Project/MeetTrack/testing"

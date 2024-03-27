@@ -1,27 +1,28 @@
-from common.aws_utilities import download_textfile_from_s3
+from common.aws_utilities import download_textfile_from_s3, download_file_from_s3
 from database.relational_db import fetch_prev_transcript_path, fetch_curr_transcript_path
+from common.globals import DOWNLOAD_DIR
 from __init__ import llm
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, get_response_synthesizer
 from llama_index.core.tools import QueryPlanTool, QueryEngineTool
 from llama_index.agent.openai import OpenAIAgent
-import tempfile
 import os
 
 class PrevMeetingQueryEngine:
-    def __init__(self, meeting_name):
+    def __init__(self, meeting_name, meeting_id):
         self.meeting_name = meeting_name
+        self.meeting_id = meeting_id
 
     def get_transcript_path(self):
-        self.transcript_path_list = fetch_prev_transcript_path(self.meeting_name)
+        self.transcript_path_list = fetch_prev_transcript_path(self.meeting_name, self.meeting_id)
 
     def handle_files_from_s3(self):
         local_transcript_paths = []
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            for transcript_path in self.transcript_path_list:
-                local_file_path = os.path.join(temp_dir, os.path.basename(transcript_path))
-                download_textfile_from_s3(transcript_path, local_file_path)
-                local_transcript_paths.append(local_file_path)
+        for transcript_path in self.transcript_path_list:
+            local_file_path = os.path.join(DOWNLOAD_DIR, transcript_path.split("/")[-1])
+            download_file_from_s3(transcript_path, local_file_path)
+            local_transcript_paths.append(local_file_path)
+
         return local_transcript_paths
 
     def create_tool(self):
@@ -129,6 +130,6 @@ class UserInteraction(CurrMeetingQueryEngine):
             return None
 
 
-def setup_prev_meeting_query_engine(meeting_name):
-    prev_meeting_query_engine = PrevMeetingQueryEngine(meeting_name)
+def setup_prev_meeting_query_engine(meeting_name, meeting_id):
+    prev_meeting_query_engine = PrevMeetingQueryEngine(meeting_name, meeting_id)
     return prev_meeting_query_engine.create_query_engine()

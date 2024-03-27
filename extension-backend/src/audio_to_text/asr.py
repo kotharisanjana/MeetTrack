@@ -41,7 +41,7 @@ class ASR:
         end_time = get_unixtime(hour, min, sec, millisec)
 
         # inconsistency in transcription timestamps
-        if end_time.unixtime <= start_time.unixtime:   # [ 121.24 -> 121.9 ] Thanks, Sam (end time should be 121.90) - handle this in the logic
+        if end_time <= start_time:   # [ 121.24 -> 121.9 ] Thanks, Sam (end time should be 121.90) - handle this in the logic
             continue
 
         self.transcript_segments.append(Transcription(start_time, end_time, TranscribedText(segment.text)))  

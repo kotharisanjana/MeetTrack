@@ -6,11 +6,11 @@ import numpy as np
 from scipy.io import wavfile
 
 class SpeakerDiarization:
-    def __init__(self, meeting_audio):
-        self.meeting_audio = meeting_audio
+    def __init__(self, audio_path):
+        self.audio_path = audio_path
 
     def read_meeting_audio(self):
-        self.samplerate, self.data = wavfile.read(self.meeting_audio)
+        self.samplerate, self.data = wavfile.read(self.audio_path)
 
     def transform_audio(self):
     # audio needs to be converted from stereo to mono

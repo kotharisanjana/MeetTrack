@@ -14,7 +14,7 @@ def create_session(meeting_name, meeting_type):
     session_data = {
     "session_id": session_id,
     "meeting_name": meeting_name,
-    "meeting_date": get_date(),
+    "meeting_date": get_date().strftime("%Y-%m-%d"),
     "meeting_type": meeting_type,
     }
 

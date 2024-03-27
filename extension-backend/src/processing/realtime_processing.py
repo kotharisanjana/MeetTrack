@@ -1,24 +1,23 @@
 from src.audio_to_text.asr import ASR
 from src.audio_to_text.diarization import SpeakerDiarization, SpeakerIDsForTranscription
-from video_processing import VideoProcessing
+from src.processing.video_processing import VideoProcessing
+import common.globals as global_vars
 from src.audio_to_text.transcript import combine_asr_diarization
 from common.aws_utilities import upload_file_to_s3, download_textfile_from_s3
-from database.vector_db import fetch_curr_transcript_path
+from database.relational_db import fetch_curr_transcript_path
+from scipy.io import wavfile
+import os
 
 class RealtimeAudio:
-    def __init__(self, meeting_recording):
-        self.meeting_recording = meeting_recording
-        
-    def realtime_audio_pipeline(self):
-        video_processing_obj = VideoProcessing(self.meeting_recording)
-        meeting_audio = video_processing_obj.get_audio()
+    def realtime_audio_pipeline(self, local_filepath):
+        VideoProcessing(local_filepath).extract_audio()
 
         # transcription
-        asr_obj = ASR(meeting_audio)
+        asr_obj = ASR(os.path.join(global_vars.DOWNLOAD_DIR, "audio.wav"))
         asr_obj.asr_pipeline()
 
         # diarization
-        diarization_obj = SpeakerDiarization(meeting_audio)
+        diarization_obj = SpeakerDiarization(os.path.join(global_vars.DOWNLOAD_DIR, "audio.wav"))
         diarization_obj.diarization_pipeline()
 
         # merge transcription and diarization and get actual speakers

@@ -9,7 +9,7 @@ def combine_asr_diarization(speaker_segments, transcript_segments):
     overall_text = "Speaker " + actual_speaker + ":" + transcript_segments[0].text.text
 
     for segment in speaker_segments:
-        detime = segment.end_time.unixtime
+        detime = segment.end_time
         speaker_id = segment.speaker.speaker_id
 
         actual_speaker = get_actual_speaker(str(int(speaker_id)))
@@ -18,7 +18,7 @@ def combine_asr_diarization(speaker_segments, transcript_segments):
             overall_text = overall_text + "\n" + "Speaker " + actual_speaker + ":"
 
         while segment_num<l:
-            tstime = transcript_segments[segment_num].start_time.unixtime
+            tstime = transcript_segments[segment_num].start_time
 
             # exact overlap window cannot be found because the diarization and transcription time segments are not consistent and words might overflow into new window
             if tstime <= detime:

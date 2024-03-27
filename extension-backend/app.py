@@ -2,14 +2,15 @@ import common.globals as global_vars
 from common.aws_utilities import *
 from database.cache import *
 from database.relational_db import *
-from src.query_engine import UserInteraction, setup_prev_meeting_query_engine
-from src.realtime_processing import RealtimeAudio
-from src.textual_component import TextualComponent
-from src.output import create_final_doc
-from src.email import send_email
+from src.user_interaction.query_engine import UserInteraction, setup_prev_meeting_query_engine
+from src.processing.realtime_processing import RealtimeAudio
+from src.textual.textual_component import TextualComponent
+from src.output.final_doc import create_final_doc
+from src.output.email import send_email
 from flask import Flask, jsonify, request
 from flask_session import Session
 import json
+import os
 from flask_cors import CORS
 
 # Initialize the Flask application
@@ -39,10 +40,12 @@ def on_submit_meeting_details(session_id):
 
   # setup previous meeting query engine
   if session_data["meeting_type"] == "recurring":
-    prev_meeting_tool = setup_prev_meeting_query_engine(session_data["meeting_name"])
+    first_occurence = check_first_occurence(session_data["meeting_name"], meeting_id)
+    if not first_occurence:
+      global prev_meeting_tool
+      prev_meeting_tool = setup_prev_meeting_query_engine(session_data["meeting_name"], meeting_id)
 
    # update session_data in redis
-  session_data["prev_meeting_tool"] = prev_meeting_tool
   session_data["meeting_id"] = meeting_id 
   updated_session_json = json.dumps(session_data)
   redis_client.set(session_id, updated_session_json)
@@ -59,7 +62,7 @@ def submit_details():
     session_id = create_session(meeting_name, meeting_type)
     on_submit_meeting_details(session_id)
   
-  return jsonify({"session_id": session_id, "status": "OK"}), 200
+  return jsonify({"status": "OK", "session_id": session_id}), 200
 
 
 @app.route("/access-session", methods=["POST"])
@@ -68,7 +71,7 @@ def access_session():
   if session_id:
     session_data = retrieve_session_data(session_id)
     if session_data:
-        return jsonify({"status": "success", "message": "You've joined the meeting session!"}), 200
+        return jsonify({"status": "OK", "message": "You've joined the meeting session!"}), 200
   else:
     return jsonify({"status": "error", "message": "Session ID not provided/ incorrect. Try again"}), 400
 
@@ -80,13 +83,13 @@ def submit_recipient_email():
   meeting_id = retrieve_session_data(session_id)["meeting_id"]
 
   insert_email(meeting_id, email)
-  return jsonify({"status": "success", "message": "Recipient email submitted successfully"}), 200
+  return jsonify({"status": "OK", "message": "Recipient email submitted successfully"}), 200
 
 
-@app.route("/recording-status", methods=["POST"])
-def recording_status():
+@app.route("/verify-recording-status", methods=["POST"])
+def verify_recording_status():
   session_id = request.json.get("session_id")
-  meeting_id = fetch_meeting_id(session_id)["meeting_id"]
+  meeting_id = fetch_meeting_id(session_id)
 
   if fetch_recording_status(meeting_id):
     return jsonify({"error": "Recording already in progress."}), 400
@@ -104,12 +107,15 @@ def process_recording():
   meeting_id = retrieve_session_data(session_id)["meeting_id"]
   meeting_recording = request.files["recording"]
   
+  local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, "recording.webm")
+  meeting_recording.save(local_filepath)
+  
   # upload meeting recording to s3 and store path in relational database
   recording_path = insert_recording_path(meeting_id)
-  if recording_path:
-    upload_file_to_s3(meeting_recording, recording_path)
+  # if recording_path:
+  #   upload_file_to_s3(meeting_recording, recording_path)
 
-  RealtimeAudio(meeting_recording).realtime_audio_pipeline()  
+  RealtimeAudio().realtime_audio_pipeline(local_filepath)  
 
   return jsonify({"success": "Recording processed successfully"}), 200
 
@@ -120,10 +126,8 @@ def answer_query():
   user_query = request.json.get("userInput")
 
   session_data = retrieve_session_data(session_id)
-  meeting_name = session_data["meeting_name"]
-  prev_meeting_tool = session_data["prev_meeting_tool"]
 
-  response = UserInteraction(session_data["meeting_id"], meeting_name).query_response_pipeline(user_query, prev_meeting_tool)
+  response = UserInteraction(session_data["meeting_id"], session_data["meeting_name"], prev_meeting_tool).query_response_pipeline(user_query)
 
   if response:
     data = {"response": response}
@@ -151,4 +155,4 @@ def processing_after_tab_close():
 
 
 if __name__ == "__main__":
-  app.run(debug=True)
+  app.run(debug=False)
