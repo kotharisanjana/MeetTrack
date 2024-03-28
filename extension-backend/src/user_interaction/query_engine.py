@@ -17,12 +17,10 @@ class PrevMeetingQueryEngine:
 
     def handle_files_from_s3(self):
         local_transcript_paths = []
-
         for transcript_path in self.transcript_path_list:
             local_file_path = os.path.join(DOWNLOAD_DIR, transcript_path.split("/")[-1])
             download_file_from_s3(transcript_path, local_file_path)
             local_transcript_paths.append(local_file_path)
-
         return local_transcript_paths
 
     def create_tool(self):
@@ -60,14 +58,16 @@ class CurrMeetingQueryEngine:
         self.transcript_path = fetch_curr_transcript_path(self.meeting_id)
 
     def handle_files_from_s3(self):
-        self.transcript = download_textfile_from_s3(self.transcript_path)
+        self.local_file_path = os.path.join(DOWNLOAD_DIR, self.transcript_path.split("/")[-1])
+        if download_file_from_s3(self.transcript_path, self.local_file_path):
+            return True
+        return False
 
     def create_tool(self):
-        if self.transcript_path:
-            self.handle_files_from_s3()
-            files = SimpleDirectoryReader(input_files=self.transcript).load_data()
+        if self.handle_files_from_s3(): 
+            files = SimpleDirectoryReader(input_files=[self.local_file_path]).load_data()
             curr_meeting_index = VectorStoreIndex.from_documents(files)
-            curr_meeting_engine = curr_meeting_index.as_query_engine(similarity_top_k=3, llm=self.init_obj.llm)
+            curr_meeting_engine = curr_meeting_index.as_query_engine(similarity_top_k=3, llm=llm)
 
             self.curr_meeting_tool = QueryEngineTool.from_defaults(
                 query_engine=curr_meeting_engine, 
@@ -83,18 +83,17 @@ class CurrMeetingQueryEngine:
 
 
 class UserInteraction(CurrMeetingQueryEngine):   
-    def __init__(self, meeting_id, meeting_name, prev_meeting_tool):
+    def __init__(self, meeting_id, meeting_name):
         super().__init__(meeting_id, meeting_name)
-        self.prev_meeting_tool = prev_meeting_tool
 
-    def create_plan_tool(self):
+    def create_plan_tool(self, prev_meeting_tool):
         super().create_query_engine()
 
         response_synthesizer = get_response_synthesizer()
         
-        if self.prev_meeting_tool and self.curr_meeting_tool:
-            tools = [self.prev_meeting_tool, self.curr_meeting_tool]
-        elif self.prev_meeting_tool:
+        if prev_meeting_tool and self.curr_meeting_tool:
+            tools = [prev_meeting_tool, self.curr_meeting_tool]
+        elif prev_meeting_tool:
             tools = [self.prev_meeting_tool]
         elif self.curr_meeting_tool:
             tools = [self.curr_meeting_tool]
@@ -118,8 +117,8 @@ class UserInteraction(CurrMeetingQueryEngine):
         )
 
     def get_response(self, user_query):
-        self.agent.query(user_query)
-        return str(self.response)        
+        response = self.agent.query(user_query)
+        return str(response)        
 
     def query_response_pipeline(self, prev_meeting_tool, user_query):
         self.create_plan_tool(prev_meeting_tool)

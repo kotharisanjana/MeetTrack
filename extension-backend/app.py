@@ -92,10 +92,10 @@ def verify_recording_status():
   meeting_id = fetch_meeting_id(session_id)
 
   if fetch_recording_status(meeting_id):
-    return jsonify({"error": "Recording already in progress."}), 400
+    return jsonify({"status": "error", "message": "Recording already in progress."}), 400
   else:
     insert_recording_status(meeting_id)
-    return jsonify({"success": "Recording started successfuly."}), 200
+    return jsonify({"status": "OK", "message": "Recording started successfuly."}), 200
   
 
 @app.route("/process-recording", methods=["POST"])
@@ -106,20 +106,20 @@ def process_recording():
   session_id = request.form.get("session_id")
   meeting_id = retrieve_session_data(session_id)["meeting_id"]
   meeting_recording = request.files["recording"]
-  
-  local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, "recording.webm")
+
+  local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm")
   meeting_recording.save(local_filepath)
   
   # upload meeting recording to s3 and store path in relational database
   recording_path = insert_recording_path(meeting_id)
-  # if recording_path:
-  #   upload_file_to_s3(meeting_recording, recording_path)
+  upload_file_to_s3(os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm"), recording_path)
 
-  RealtimeAudio().realtime_audio_pipeline(local_filepath)  
+  RealtimeAudio().realtime_audio_pipeline(local_filepath, meeting_id)  
 
   return jsonify({"success": "Recording processed successfully"}), 200
 
   
+# ------------test-------------
 @app.route("/answer-query", methods=["POST"])
 def answer_query():
   session_id = request.json.get("session_id")
@@ -127,31 +127,30 @@ def answer_query():
 
   session_data = retrieve_session_data(session_id)
 
-  response = UserInteraction(session_data["meeting_id"], session_data["meeting_name"], prev_meeting_tool).query_response_pipeline(user_query)
+  response = UserInteraction(session_data["meeting_id"], session_data["meeting_name"]).query_response_pipeline(prev_meeting_tool, user_query)
 
   if response:
-    data = {"response": response}
-    return jsonify({"status": "success", "data": data}), 200
+    return jsonify({"status": "OK", "data": response}), 200
   else:
     return jsonify({"status": "error", "data": "No response found for query. Please try again"}), 400
 
 
 # this should create all textual components, create meeting notes doc by combining text and images, and dispose all resources
-@app.route("/processing-after-tab-close", methods=["POST"])
-def processing_after_tab_close():
-  session_id = request.json.get("session_id")
-  session_data = retrieve_session_data(session_id)
-  meeting_name = session_data["meeting_name"]
-  meeting_date = session_data["meeting_date"]
-  meeting_id = session_data["meeting_id"]
+# @app.route("/processing-after-tab-close", methods=["POST"])
+# def processing_after_tab_close():
+#   session_id = request.json.get("session_id")
+#   session_data = retrieve_session_data(session_id)
+#   meeting_name = session_data["meeting_name"]
+#   meeting_date = session_data["meeting_date"]
+#   meeting_id = session_data["meeting_id"]
 
-  recipient_email = fetch_email(meeting_id)
+#   recipient_email = fetch_email(meeting_id)
   
-  textual_component = TextualComponent().textual_component_pipeline(meeting_id)
-  output_path = fetch_output_path(meeting_id)
-  create_final_doc(textual_component, image_keys, output_path)
-  send_email(output_path, local_file_path, recipient_email, meeting_name, meeting_date)
-  pass
+#   textual_component = TextualComponent().textual_component_pipeline(meeting_id)
+#   output_path = fetch_output_path(meeting_id)
+#   create_final_doc(textual_component, image_keys, output_path)
+#   send_email(output_path, local_file_path, recipient_email, meeting_name, meeting_date)
+#   pass
 
 
 if __name__ == "__main__":

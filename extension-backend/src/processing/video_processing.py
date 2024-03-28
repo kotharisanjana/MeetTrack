@@ -7,11 +7,12 @@ import os
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_audio
 
 class VideoProcessing:
-    def __init__(self, local_filepath):
+    def __init__(self, local_filepath, meeting_id):
         self.local_filepath = local_filepath
+        self.meeting_id = meeting_id
 
     def extract_audio(self):
-        ffmpeg_extract_audio(self.local_filepath, os.path.join(global_vars.DOWNLOAD_DIR, "audio.wav"))
+        ffmpeg_extract_audio(self.local_filepath, os.path.join(global_vars.DOWNLOAD_DIR, f"{self.meeting_id}_audio.wav"))
         
     # def get_screenshots(self, interval=20):
     #     """

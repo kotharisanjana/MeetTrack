@@ -5,7 +5,8 @@ import boto3
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from qdrant_client import QdrantClient
-from langchain_openai import OpenAI, ChatOpenAI
+from llama_index.llms.openai import OpenAI as LlamaOpenAI
+from langchain_openai import OpenAI as LangChainOpenAI, ChatOpenAI
 import openai
 
 load_dotenv()
@@ -36,7 +37,7 @@ asr_model = WhisperModel("base")
 diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", 
                                                 use_auth_token=os.getenv("HF_API"))
 
-llm = OpenAI(model="gpt-4", 
+llm = LlamaOpenAI(model="gpt-4", 
              openai_api_key=os.getenv("OPENAI_API"),
              temperature=0,
              )
@@ -46,7 +47,7 @@ llm_chat = ChatOpenAI(model_name="gpt-3.5-turbo",
                       temperature=0
                       )
 
-llm_vision = OpenAI(model="gpt-4-vision-preview", 
+llm_vision = LangChainOpenAI(model="gpt-4-vision-preview", 
                     openai_api_key=os.getenv("OPENAI_API")
                     )
 

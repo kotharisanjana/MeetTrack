@@ -68,10 +68,13 @@ def download_file_from_s3(object_key, local_file_path):
     try:
         s3_client.download_file(global_vars.S3_BUCKET, object_key, local_file_path)
         print(f"File downloaded successfully to {local_file_path}")
+        return True
     except NoCredentialsError:
         print("Credentials not available")
+        return False
     except Exception as e:
         print(f"Error downloading file: {e}")
+        return False
         
 
 def download_textfile_from_s3(object_key, local_file_path=None):
