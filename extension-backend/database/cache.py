@@ -1,15 +1,12 @@
 from common.utils import get_date
 from redis import Redis
 import uuid
-from flask import g, current_app
 import json
 
-def get_redis_client():
-    if "redis_client" not in g:
-        # Initialize a Redis client
-        g.redis_client = Redis(host="localhost", port=6379, db=0)
-    return g.redis_client
+redis_client = Redis(host="localhost", port=6379, db=0)
 
+def get_redis_client():
+    return redis_client
 
 def create_session(meeting_name, meeting_type):
     session_id = str(uuid.uuid4())
@@ -17,9 +14,8 @@ def create_session(meeting_name, meeting_type):
     session_data = {
     "session_id": session_id,
     "meeting_name": meeting_name,
-    "meeting_date": get_date(),
+    "meeting_date": get_date().strftime("%Y-%m-%d"),
     "meeting_type": meeting_type,
-    "init_obj": current_app.config["init_obj"],
     }
 
     # Convert session data to JSON string
@@ -28,12 +24,7 @@ def create_session(meeting_name, meeting_type):
     # Store session data in Redis under session ID key
     redis_client = get_redis_client()
     redis_client.set(session_id, session_json)
-
-    # delete to prevent redundancy
-    del current_app.config["init_obj"]
-
     return session_id
-
 
 def get_session_id(meeting_name):
     redis_client = get_redis_client()
@@ -46,7 +37,6 @@ def get_session_id(meeting_name):
         if sess_dict.get("meeting_name") == meeting_name and sess_dict.get("meeting_date") == get_date():
             return sess_key.decode('utf-8')
     return None
-
 
 def retrieve_session_data(session_id):
     redis_client = get_redis_client()

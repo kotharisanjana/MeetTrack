@@ -1,5 +1,5 @@
 from common.utils import get_unixtime
-from database.redis import retrieve_session_data
+from __init__ import asr_model
 
 class TranscribedText:
   def __init__(self, text):
@@ -12,12 +12,11 @@ class Transcription:
     self.text = text 
 
 class ASR:
-  def __init__(self, meeting_audio, session_id):
+  def __init__(self, meeting_audio):
     self.meeting_audio = meeting_audio
-    self.session_data = retrieve_session_data(session_id)
 
   def transcribe(self):
-    self.segments, _ = self.session_data["init_obj"].asr_model.transcribe(audio=self.meeting_audio, word_timestamps=True)
+    self.segments, _ = asr_model.transcribe(audio=self.meeting_audio, word_timestamps=True)
 
   def extract_time(self, time):
     time_str = str(time)
@@ -42,7 +41,7 @@ class ASR:
         end_time = get_unixtime(hour, min, sec, millisec)
 
         # inconsistency in transcription timestamps
-        if end_time.unixtime <= start_time.unixtime:   # [ 121.24 -> 121.9 ] Thanks, Sam (end time should be 121.90) - handle this in the logic
+        if end_time <= start_time:   # [ 121.24 -> 121.9 ] Thanks, Sam (end time should be 121.90) - handle this in the logic
             continue
 
         self.transcript_segments.append(Transcription(start_time, end_time, TranscribedText(segment.text)))  

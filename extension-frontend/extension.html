@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: "Times New Roman", Times, serif;
-      padding: 10px;
+      padding: 5px;
       width: 400px;
       font-size: 16px;
     }
@@ -27,7 +27,6 @@
     }
     textarea {
       width: calc(100% - 20px);
-      padding: 10px;
       margin-bottom: 10px;
       word-wrap: break-word;
       height: auto;
@@ -48,32 +47,18 @@
       opacity: 0.5;
       filter: grayscale(100%);
     }
-    .input-container {
-      display: flex;
-      justify-content: space-between; 
-      align-items: flex-start; 
-    }
-    .meetingIDForm input[type="text"] {
-      width: 150px;
-      margin-right: 10px;
-    }
-    .separator {
-      text-align: center;
-      margin-top: 70px;
-      font-size: 20px;
-    }
   </style>
 </head>
 <body>
   <div id="header">
     <img src="icon.png" alt="Logo" width="20">
-    <h2>MeetTrack</h2>
+    <h3>MeetTrack</h3>
   </div>
   <hr>
 
-  <h3>Enter meeting details</h3>
+  <h4>Meeting details</h4>
   
-  <div class="input-container">
+  <div class="input-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div>
       <form id="meetingDetailsForm">
         <input id="meetingName" placeholder="Meeting Name"><br><br>
@@ -85,7 +70,7 @@
       </form>
     </div>
 
-    <div class="separator">OR</div>
+    <div class="separator" style="text-align: center; margin-top: 70px; font-size: 20px;">OR</div>
 
     <form class="sessionIDForm">
       <input type="text" id="sessionID" placeholder="Session ID"><br><br>
@@ -93,18 +78,29 @@
     </form>
   </div>
 
-  <h3>Record meeting</h3>
-  <button id="startRecordingButton" class="disabled">Start</button>
-  <button id="stopRecordingButton" class="disabled">Stop</button>
+  <div style="display: flex; align-items: center;">
+    <h4 style="margin-right: 10px;">Send notes to</h4>
+    <form class="emailIDForm" style="display: flex;">
+        <input type="text" id="emailID" placeholder="Email ID">
+        <button type="submit" style="margin-left: 5px;">Submit</button>
+    </form>
+  </div>
 
-  <h3>Got any questions?</h3>
+  <br>
+
+  <h4 style="display: inline;">Record meeting</h4>
+  <button id="startRecordingButton" class="disabled" style="display: inline;">Start</button>
+  <button id="stopRecordingButton" class="disabled" style="display: inline;">Stop</button>
+
+  <h4>Got any questions?</h4>
   <form id="userInputForm" class="disabled">
-    <textarea id="userInput" placeholder="How can I help you?"></textarea>
+    <textarea id="userInput"></textarea>
     <button type="submitQuery">Submit</button>
   </form>
 
   <div id="textDisplay"></div>
 
   <script src="extension.js"></script>
+
 </body>
 </html>

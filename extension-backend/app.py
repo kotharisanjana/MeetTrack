@@ -1,22 +1,25 @@
-from __init__ import initialise
-from database.redis import *
-from database.relational_db import RelationalDb
-from database.vector_db import VectorDb
-from src.query_engine import UserInteraction, setup_prev_meeting_query_engine
-from src.realtime_audio import RealtimeAudio
+import common.globals as global_vars
+from common.aws_utilities import *
+from database.cache import *
+from database.relational_db import *
+from src.user_interaction.query_engine import UserInteraction, setup_prev_meeting_query_engine
+from src.processing.realtime_processing import RealtimeAudio
+from src.textual.textual_component import TextualComponent
+from src.output.final_doc import create_final_doc
+from src.output.email import send_email
 from flask import Flask, jsonify, request
 from flask_session import Session
 import json
-from flask_cors import CORS
 import os
+from flask_cors import CORS
 
 # Initialize the Flask application
 app = Flask(__name__)
 
 # Set the session mechanism details
-app.config["SESSION_TYPE"] = os.getenv("SESSION_TYPE")
-app.config["SESSION_REDIS"] = os.getenv("SESSION_REDIS")
-app.config["PERMANENT_SESSION_LIFETIME"] = os.getenv("PERMANENT_SESSION_LIFETIME")
+app.config["SESSION_TYPE"] = global_vars.SESSION_TYPE
+app.config["SESSION_REDIS"] = global_vars.REDIS_SESSION
+app.config["PERMANENT_SESSION_LIFETIME"] = global_vars.PERMANENT_SESSION_LIFETIME
 
 # Enable CORS
 CORS(app)
@@ -24,40 +27,32 @@ CORS(app)
 # Initialize the session mechanism
 Session(app)
 
-# Initialize other components 
-initialise(app)
+prev_meeting_tool = None
 
 # refactor and place in correct file
 def on_submit_meeting_details(session_id):
   redis_client = get_redis_client()
   session_data = retrieve_session_data(session_id)
 
-  # initialize vector and relational database objects
-  relational_db_obj = RelationalDb(session_data)
-  vector_db_obj = VectorDb(session_data)
-
-  # generate meeting_id and insert meeting info into relational database
-  relational_db_obj.insert_meeting_info()
-
-  # store database objects in session_data
-  session_data["relational_db_obj"] = relational_db_obj
-  session_data["vector_db_obj"] = vector_db_obj
-  # add meeting_id to session_data
-  session_data["meeting_id"] = relational_db_obj.meeting_id  
+  insert_meeting_info(session_data)
+  meeting_id = fetch_meeting_id(session_data["session_id"])
+  insert_s3_paths(meeting_id)
 
   # setup previous meeting query engine
   if session_data["meeting_type"] == "recurring":
-    prev_meeting_obj = setup_prev_meeting_query_engine(session_data)
-    # store previous_meeting_obj in session_data
-    session_data["prev_meeting_obj"] = prev_meeting_obj
+    first_occurence = check_first_occurence(session_data["meeting_name"], meeting_id)
+    if not first_occurence:
+      global prev_meeting_tool
+      prev_meeting_tool = setup_prev_meeting_query_engine(session_data["meeting_name"], meeting_id)
 
-  # update session_data in redis
+   # update session_data in redis
+  session_data["meeting_id"] = meeting_id 
   updated_session_json = json.dumps(session_data)
   redis_client.set(session_id, updated_session_json)
 
 
-@app.route("/submit-meeting-details", methods=["POST"])
-def submit_meeting_details():
+@app.route("/submit-details", methods=["POST"])
+def submit_details():
   meeting_name = request.json.get("name")
   meeting_type = request.json.get("meetingType")
 
@@ -67,7 +62,7 @@ def submit_meeting_details():
     session_id = create_session(meeting_name, meeting_type)
     on_submit_meeting_details(session_id)
   
-  return jsonify({"session_id": session_id, "status": "OK"}), 200
+  return jsonify({"status": "OK", "session_id": session_id}), 200
 
 
 @app.route("/access-session", methods=["POST"])
@@ -76,21 +71,31 @@ def access_session():
   if session_id:
     session_data = retrieve_session_data(session_id)
     if session_data:
-        return jsonify({"status": "success", "message": "You've joined the meeting session!"}), 200
+        return jsonify({"status": "OK", "message": "You've joined the meeting session!"}), 200
   else:
     return jsonify({"status": "error", "message": "Session ID not provided/ incorrect. Try again"}), 400
 
 
-@app.route("/recording-status", methods=["POST"])
-def recording_status():
+@app.route("/submit-recipient-email", methods=["POST"])
+def submit_recipient_email():
+  email = request.json.get("email")
   session_id = request.json.get("session_id")
-  session_data = retrieve_session_data(session_id)
+  meeting_id = retrieve_session_data(session_id)["meeting_id"]
 
-  if session_data["relational_db_obj"].get_recording_status():
-    return jsonify({"error": "Recording already in progress."}), 400
+  insert_email(meeting_id, email)
+  return jsonify({"status": "OK", "message": "Recipient email submitted successfully"}), 200
+
+
+@app.route("/verify-recording-status", methods=["POST"])
+def verify_recording_status():
+  session_id = request.json.get("session_id")
+  meeting_id = fetch_meeting_id(session_id)
+
+  if fetch_recording_status(meeting_id):
+    return jsonify({"status": "error", "message": "Recording already in progress."}), 400
   else:
-    session_data["relational_db_obj"].insert_recording_status()
-    return jsonify({"success": "Recording started successfuly."}), 200
+    insert_recording_status(meeting_id)
+    return jsonify({"status": "OK", "message": "Recording started successfuly."}), 200
   
 
 @app.route("/process-recording", methods=["POST"])
@@ -99,31 +104,54 @@ def process_recording():
     return jsonify({"error": "No recording file provided"}), 400
   
   session_id = request.form.get("session_id")
+  meeting_id = retrieve_session_data(session_id)["meeting_id"]
   meeting_recording = request.files["recording"]
 
-  session_data = retrieve_session_data(session_id)
+  local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm")
+  meeting_recording.save(local_filepath)
   
-  # upload meeting_recording to s3
-  session_data["relational_db_obj"].insert_recording_snippet_path()
+  # upload meeting recording to s3 and store path in relational database
+  recording_path = insert_recording_path(meeting_id)
+  upload_file_to_s3(os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm"), recording_path)
 
-  RealtimeAudio(meeting_recording, session_id, session_data["vector_db_obj"]).realtime_audio_pipeline()  
+  RealtimeAudio().realtime_audio_pipeline(local_filepath, meeting_id)  
 
   return jsonify({"success": "Recording processed successfully"}), 200
 
   
+# ------------test-------------
 @app.route("/answer-query", methods=["POST"])
 def answer_query():
   session_id = request.json.get("session_id")
   user_query = request.json.get("userInput")
 
-  response = UserInteraction(session_id).query_response_pipeline(user_query)
+  session_data = retrieve_session_data(session_id)
+
+  response = UserInteraction(session_data["meeting_id"], session_data["meeting_name"]).query_response_pipeline(prev_meeting_tool, user_query)
 
   if response:
-    data = {"response": response}
-    return jsonify({"status": "success", "data": data}), 200
+    return jsonify({"status": "OK", "data": response}), 200
   else:
     return jsonify({"status": "error", "data": "No response found for query. Please try again"}), 400
 
 
+# this should create all textual components, create meeting notes doc by combining text and images, and dispose all resources
+# @app.route("/processing-after-tab-close", methods=["POST"])
+# def processing_after_tab_close():
+#   session_id = request.json.get("session_id")
+#   session_data = retrieve_session_data(session_id)
+#   meeting_name = session_data["meeting_name"]
+#   meeting_date = session_data["meeting_date"]
+#   meeting_id = session_data["meeting_id"]
+
+#   recipient_email = fetch_email(meeting_id)
+  
+#   textual_component = TextualComponent().textual_component_pipeline(meeting_id)
+#   output_path = fetch_output_path(meeting_id)
+#   create_final_doc(textual_component, image_keys, output_path)
+#   send_email(output_path, local_file_path, recipient_email, meeting_name, meeting_date)
+#   pass
+
+
 if __name__ == "__main__":
-  app.run(debug=True)
+  app.run(debug=False)
