@@ -86,8 +86,8 @@ def submit_recipient_email():
   return jsonify({"status": "OK", "message": "Recipient email submitted successfully"}), 200
 
 
-@app.route("/verify-recording-status", methods=["POST"])
-def verify_recording_status():
+@app.route("/check-recording-status", methods=["POST"])
+def check_recording_status():
   session_id = request.json.get("session_id")
   meeting_id = fetch_meeting_id(session_id)
 

@@ -6,13 +6,13 @@ let recorderStateFlag = true;
 let media = null;
 
 document.addEventListener("DOMContentLoaded", function () {
-  var meetingDetailsForm = document.getElementById("meetingDetailsForm");
+  var meetingDetailsForm = document.querySelector(".meetingDetailsForm");
   var sessionIDForm = document.querySelector('.sessionIDForm');
+  var emailIDForm = document.querySelector(".emailIDForm");
   var startRecordingButton = document.getElementById("startRecordingButton");
   var stopRecordingButton = document.getElementById("stopRecordingButton");
   var userInputForm = document.getElementById("userInputForm");
-  var emailIDForm = document.getElementById("emailIDForm")
-
+  
   meetingDetailsForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var name = document.getElementById('meetingName').value;
@@ -50,23 +50,35 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .then(response => {
       if (response.status === 200) {
-          alert(response.message);
           localStorage.setItem("session_id", session_id);
+          localStorage.setItem("recording_status", "false");
 
           sessionIDForm.classList.add("disabled");
           startRecordingButton.classList.remove("disabled");
           stopRecordingButton.classList.remove("disabled");
           userInputForm.classList.remove("disabled");
-      }
-      else if (response.status === 400) {
-          alert(response.message);
+
+          return response.json();
       }
     })
     .then(data => {
+      alert(data.message);
     })
     .catch(error => console.error("Error:", error));
   });
 
+  startRecordingButton.addEventListener("click", function () {
+    chrome.runtime.sendMessage({
+      type: "start-recording",
+    });
+  });
+
+
+  stopRecordingButton.addEventListener("click", function () {
+    chrome.runtime.sendMessage({
+      type: "stop-recording",
+    });
+  });
 
   emailIDForm.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -87,20 +99,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
 
-  startRecordingButton.addEventListener("click", function () {
-    chrome.runtime.sendMessage({
-      type: "start-recording",
-    });
-  });
-
-
-  stopRecordingButton.addEventListener("click", function () {
-    chrome.runtime.sendMessage({
-      type: "stop-recording",
-    });
-  });
-
-
   userInputForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var userInput = document.getElementById('userInput').value;
@@ -118,7 +116,7 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .then(response => response.json())
     .then(data => {
-      textDisplay.textContent = data.response;
+      textDisplay.textContent = data.data;
     })
     .catch(error => console.error("Error:", error));
   });
@@ -138,25 +136,35 @@ chrome.runtime.onMessage.addListener(async (message) => {
   return true;
 });
 
+async function checkRecordingStaus(){
+  session_id = localStorage.getItem("session_id");
+
+  const recordingStatusResponse = await fetch("http://localhost:5000/check-recording-status", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ session_id: session_id })
+  });
+  return recordingStatusResponse.json();
+}
+
 async function startRecording(streamId) {
   try {
-    if (recorder && recorder.state === "recording") {
-      alert("Recording already in progress.");
-      return;
+    session_id = localStorage.getItem("session_id");
+    recording_status = localStorage.getItem("recording_status");
+
+    if (recording_status === "false") {
+      recordingStatusResponse = await checkRecordingStaus();
     }
 
-    session_id = localStorage.getItem("session_id");
+    if (recording_status === "true" || recordingStatusResponse.status === "OK") {
+      if (recording_status === "false"){
+        alert(recordingStatusResponse.message);
+      }
 
-    // Check if the meeting is already being recorded and prevent other users from starting a new recording
-    const recordingStatusResponse = await fetch("http://localhost:5000/recording-status", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ session_id: session_id })
-    });
+      localStorage.setItem("recording_status", "true");
 
-    if (recordingStatusResponse.status === 200) {
       // Create media stream for the first time
       try{
         if (mediaStreamFlag) {
@@ -233,7 +241,7 @@ async function startRecording(streamId) {
         // Stop the recorder after 30 seconds
         stopTimer = setTimeout(() => {
           stopRecording();
-        }, 30000);
+        }, 20000);
       }
     } else if (recordingStatusResponse.status === 400) {
       alert("Recording is already in progress.");

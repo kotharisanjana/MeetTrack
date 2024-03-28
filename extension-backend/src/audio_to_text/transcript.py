@@ -2,7 +2,7 @@ from database.vector_db import get_actual_speaker
 
 def combine_asr_diarization(speaker_segments, transcript_segments):
     l = len(transcript_segments)
-    
+
     segment_num = 1
 
     actual_speaker = get_actual_speaker(str(int(speaker_segments[0].speaker.speaker_id)))
