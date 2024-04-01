@@ -59,23 +59,18 @@ class CurrMeetingQueryEngine:
 
     def handle_files_from_s3(self):
         self.local_file_path = os.path.join(DOWNLOAD_DIR, self.transcript_path.split("/")[-1])
-        if download_file_from_s3(self.transcript_path, self.local_file_path):
-            return True
-        return False
 
     def create_tool(self):
-        if self.handle_files_from_s3(): 
-            files = SimpleDirectoryReader(input_files=[self.local_file_path]).load_data()
-            curr_meeting_index = VectorStoreIndex.from_documents(files)
-            curr_meeting_engine = curr_meeting_index.as_query_engine(similarity_top_k=3, llm=llm)
+        self.handle_files_from_s3()
+        files = SimpleDirectoryReader(input_files=[self.local_file_path]).load_data()
+        curr_meeting_index = VectorStoreIndex.from_documents(files)
+        curr_meeting_engine = curr_meeting_index.as_query_engine(similarity_top_k=3, llm=llm)
 
-            self.curr_meeting_tool = QueryEngineTool.from_defaults(
-                query_engine=curr_meeting_engine, 
-                name=self.meeting_name,
-                description=(f"Provides transcripts from current meeting till this point in time"),
-                )
-        else:
-            self.curr_meeting_tool = None
+        self.curr_meeting_tool = QueryEngineTool.from_defaults(
+            query_engine=curr_meeting_engine, 
+            name=self.meeting_name,
+            description=(f"Provides transcripts from current meeting till this point in time"),
+            )
 
     def create_query_engine(self):
         self.get_transcript_path()

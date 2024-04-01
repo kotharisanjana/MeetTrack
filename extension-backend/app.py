@@ -3,7 +3,7 @@ from common.aws_utilities import *
 from database.cache import *
 from database.relational_db import *
 from src.user_interaction.query_engine import UserInteraction, setup_prev_meeting_query_engine
-from src.processing.realtime_processing import RealtimeAudio
+from src.processing.realtime_processing import OnlineAudioProcessing
 from src.textual.textual_component import TextualComponent
 from src.output.final_doc import create_final_doc
 from src.output.email import send_email
@@ -12,6 +12,7 @@ from flask_session import Session
 import json
 import os
 from flask_cors import CORS
+import time
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -89,6 +90,7 @@ def submit_recipient_email():
 @app.route("/check-recording-status", methods=["POST"])
 def check_recording_status():
   session_id = request.json.get("session_id")
+  # this needs to be awaited
   meeting_id = fetch_meeting_id(session_id)
 
   if fetch_recording_status(meeting_id):
@@ -109,17 +111,16 @@ def process_recording():
 
   local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm")
   meeting_recording.save(local_filepath)
-  
+
   # upload meeting recording to s3 and store path in relational database
   recording_path = insert_recording_path(meeting_id)
   upload_file_to_s3(os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm"), recording_path)
 
-  RealtimeAudio().realtime_audio_pipeline(local_filepath, meeting_id)  
+  OnlineAudioProcessing(local_filepath, meeting_id).audio_pipeline()  
 
   return jsonify({"success": "Recording processed successfully"}), 200
 
   
-# ------------test-------------
 @app.route("/answer-query", methods=["POST"])
 def answer_query():
   session_id = request.json.get("session_id")

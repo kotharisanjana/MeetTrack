@@ -24,18 +24,18 @@ def insert_identified_speaker_embedding(embeddings):
     for i, emb in enumerate(embeddings):
         if np.any(emb):
             vector_db_client.upsert(
-                collection_name="identified_speaker_embeddings",
+                collection_name="identified-speaker-embeddings",
                 wait=True,
                 points=[
-                    PointStruct(id=str(i), vector=emb.tolist())
+                    PointStruct(id=i, payload={"speaker": str(i)}, vector=emb.tolist())
                 ]
             )
 
 def insert_actual_speaker_embedding(speaker_name, voice_embedding):
     vector_db_client.upsert(
-        collection_name="actual_speaker_embeddings",
+        collection_name="actual-speaker-embeddings",
         wait=True,
         points=[
-            PointStruct(id=speaker_name, vector=voice_embedding[0].tolist())
+            PointStruct(id=speaker_name, payload={"speaker": speaker_name}, vector=voice_embedding[0].tolist())
         ]
     )

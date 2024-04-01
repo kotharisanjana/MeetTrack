@@ -31,10 +31,11 @@ def insert_s3_paths(meeting_id):
     '''
     transcript_path = f"{global_vars.TRANSCRIPTION_FOLDER}/{meeting_id}_transcript.txt"
     output_path = f"{global_vars.OUTPUT_FOLDER}/{meeting_id}_output.docx"
+    diarization_path = f"{global_vars.DIARIZATION_FOLDER}/{meeting_id}_diarization.txt"
     
     try:
-        sql = "INSERT INTO s3_paths(meeting_id, transcript_path, output_path) VALUES (%s, %s, %s);"
-        values = (meeting_id, transcript_path, output_path)
+        sql = "INSERT INTO s3_paths(meeting_id, transcript_path, diarization_path, output_path) VALUES (%s, %s, %s, %s);"
+        values = (meeting_id, transcript_path, diarization_path, output_path)
         conn_cursor.execute(sql, values)
         conn_cursor.connection.commit()
     except (Exception, psycopg2.DatabaseError) as error:
@@ -140,6 +141,20 @@ def fetch_curr_transcript_path(meeting_id):
         return transcript_path
     except (Exception, psycopg2.DatabaseError) as error:
         print("Database error in fetch_curr_transcript_path(): ", error)
+        return None
+
+
+def fetch_diarization_path(meeting_id):
+    '''
+    Retrieves current meeting diarization file path from relational database
+    '''
+    try:
+        sql = "SELECT diarization_path FROM s3_paths WHERE meeting_id=%s;"
+        conn_cursor.execute(sql, (meeting_id, ))
+        diarization_path = conn_cursor.fetchone()[0]
+        return diarization_path
+    except (Exception, psycopg2.DatabaseError) as error:
+        print("Database error in fetch_diarization_path(): ", error)
         return None
     
 

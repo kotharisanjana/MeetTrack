@@ -1,13 +1,16 @@
 from common.utils import get_unixtime
 from __init__ import diarization_pipeline
+import common.globals as global_vars
 from database.vector_db import insert_identified_speaker_embedding
 import torch
 import numpy as np
 from scipy.io import wavfile
+import os
 
 class SpeakerDiarization:
-    def __init__(self, audio_path):
+    def __init__(self, audio_path, meeting_id):
         self.audio_path = audio_path
+        self.meeting_id = meeting_id
 
     def read_meeting_audio(self):
         self.samplerate, self.data = wavfile.read(self.audio_path)
@@ -27,9 +30,11 @@ class SpeakerDiarization:
         self.transform_audio()
         self.diarize()
         insert_identified_speaker_embedding(self.embeddings)
-    
-    def get_speakers(self):
-        return str(self.speakers).splitlines()
+
+    def create_diarization(self):
+        with open(os.path.join(global_vars.DOWNLOAD_DIR, f"{self.meeting_id}_diarization.txt"), "a") as file:
+           file.write(str(self.speakers) + "\n")
+           file.write("*" + "\n")
 
 
 class Speaker:
@@ -71,7 +76,7 @@ class SpeakerIDsForTranscription:
             end_time = get_unixtime(end_hour, end_min, end_sec, end_millisec)
 
             # to handle incorrect diarization where a slight change in tone of the existing speaker is changing speaker id -> error
-            if end_time.unixtime - start_time.unixtime < 1:
+            if end_time - start_time < 1:
                 continue
             speaker = Speaker(segment_components[5].split("_")[1])
 
@@ -100,6 +105,8 @@ class SpeakerIDsForTranscription:
 
             i = j
 
-    def merge_speaker_segments_pipeline(self):
+    def speaker_segments_pipeline(self):
         self.create_speaker_segments()
+        print("after create_speaker_segments()")
         self.merge_speaker_segments()
+        print("after merge_speaker_segments()")
