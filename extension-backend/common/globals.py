@@ -8,6 +8,7 @@ S3_BUCKET = "meet-track-storage"
 RECORDINGS_FOLDER = "recordings"
 SCREENSHOTS_FOLDER = "screenshots"
 TRANSCRIPTION_FOLDER = "transcription"
+DIARIZATION_FOLDER = "diarization"
 OUTPUT_FOLDER = "finaldocument"
 
 DOWNLOAD_DIR = "/home/sanjana/Desktop/Masters_Project/MeetTrack/testing"

@@ -32,7 +32,7 @@ vector_db_client = QdrantClient(url=os.getenv("VECTOR_DB_URL"),
                                 api_key=os.getenv("VECTOR_DB_API")
                                 )
 
-asr_model = WhisperModel("base")
+asr_model = WhisperModel("tiny", compute_type="int8")
 
 diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", 
                                                 use_auth_token=os.getenv("HF_API"))

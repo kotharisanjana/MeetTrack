@@ -1,5 +1,8 @@
 from common.utils import get_unixtime
+import common.globals as global_vars
 from __init__ import asr_model
+from common.aws_utilities import upload_file_to_s3
+import os
 
 class TranscribedText:
   def __init__(self, text):
@@ -12,11 +15,21 @@ class Transcription:
     self.text = text 
 
 class ASR:
-  def __init__(self, meeting_audio):
-    self.meeting_audio = meeting_audio
+  def __init__(self, meeting_id):
+    self.meeting_id = meeting_id
 
-  def transcribe(self):
-    self.segments, _ = asr_model.transcribe(audio=self.meeting_audio, word_timestamps=True)
+  def transcribe(self, meeting_audio):
+    self.segments, _ = asr_model.transcribe(audio=meeting_audio, language="en")
+
+  def create_transcript(self, transcript_path):
+    with open(os.path.join(global_vars.DOWNLOAD_DIR, f"{self.meeting_id}_transcript.txt"), "a") as file:
+        for segment in self.segments:
+          print(segment.text)
+          text = "[ " + str(segment.start) + " -> " + str(segment.end) + " ]" + segment.text + "\n"
+          file.write(text)
+          file.flush()
+        file.write("*" + "\n")
+    upload_file_to_s3(os.path.join(global_vars.DOWNLOAD_DIR, f"{self.meeting_id}_transcript.txt"), transcript_path)
 
   def extract_time(self, time):
     time_str = str(time)
@@ -28,7 +41,7 @@ class ASR:
     millisec = int(time_str[1][:3])
     return hour, min, sec, millisec
 
-  def merge_transcription_segments(self):
+  def create_transcript_segments(self):
     self.transcript_segments = []
 
     for segment in self.segments:
@@ -45,7 +58,3 @@ class ASR:
             continue
 
         self.transcript_segments.append(Transcription(start_time, end_time, TranscribedText(segment.text)))  
-
-  def asr_pipeline(self):
-    self.transcribe()
-    self.merge_transcription_segments()
