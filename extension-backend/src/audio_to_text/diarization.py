@@ -1,7 +1,7 @@
 from common.utils import get_unixtime
 from __init__ import diarization_pipeline
 import common.globals as global_vars
-from database.vector_db import insert_identified_speaker_embedding
+from database.vector_db import store_speaker_embedding
 import torch
 import numpy as np
 from scipy.io import wavfile
@@ -29,7 +29,7 @@ class SpeakerDiarization:
         self.read_meeting_audio()
         self.transform_audio()
         self.diarize()
-        insert_identified_speaker_embedding(self.embeddings)
+        store_speaker_embedding(self.embeddings)
 
     def create_diarization(self):
         with open(os.path.join(global_vars.DOWNLOAD_DIR, f"{self.meeting_id}_diarization.txt"), "a") as file:

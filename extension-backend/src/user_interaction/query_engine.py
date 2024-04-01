@@ -1,4 +1,4 @@
-from common.aws_utilities import download_textfile_from_s3, download_file_from_s3
+from common.aws_utilities import download_file_from_s3
 from database.relational_db import fetch_prev_transcript_path, fetch_curr_transcript_path
 from common.globals import DOWNLOAD_DIR
 from __init__ import llm
