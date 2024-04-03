@@ -57,17 +57,17 @@ def get_s3_image_bytes(object_key):
     return response['Body'].read()
 
 
-def download_file_from_s3(object_key, local_file_path):
+def download_file_from_s3(object_key, local_filepath):
     """
     Download a file from S3 to a local file path.
 
     :param bucket_name: Name of the S3 bucket.
     :param object_key: Key of the object to download.
-    :param local_file_path: Local path to save the downloaded file.
+    :param local_filepath: Local path to save the downloaded file.
     """
     try:
-        s3_client.download_file(global_vars.S3_BUCKET, object_key, local_file_path)
-        print(f"File downloaded successfully to {local_file_path}")
+        s3_client.download_file(global_vars.S3_BUCKET, object_key, local_filepath)
+        print(f"File downloaded successfully to {local_filepath}")
         return True
     except NoCredentialsError:
         print("Credentials not available")
@@ -77,7 +77,7 @@ def download_file_from_s3(object_key, local_file_path):
         return False
         
 
-def download_textfile_from_s3(object_key, local_file_path=None):
+def download_textfile_from_s3(object_key, local_filepath=None):
     """
     Download a file from S3 and return its content as a string.
 
@@ -87,7 +87,7 @@ def download_textfile_from_s3(object_key, local_file_path=None):
     """
     try:
         file_content = BytesIO()
-        s3_client.download_fileobj(global_vars.S3_BUCKET, object_key, file_content, local_file_path)
+        s3_client.download_fileobj(global_vars.S3_BUCKET, object_key, file_content, local_filepath)
         file_content.seek(0)
         file_content_str = file_content.read().decode('utf-8')
         return file_content_str

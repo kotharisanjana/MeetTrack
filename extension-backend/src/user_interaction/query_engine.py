@@ -1,6 +1,6 @@
 from common.aws_utilities import download_file_from_s3
 from database.relational_db import fetch_prev_transcript_path, fetch_curr_transcript_path
-from common.globals import DOWNLOAD_DIR
+import common.globals as global_vars
 from __init__ import llm
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, get_response_synthesizer
 from llama_index.core.tools import QueryPlanTool, QueryEngineTool
@@ -18,9 +18,9 @@ class PrevMeetingQueryEngine:
     def handle_files_from_s3(self):
         local_transcript_paths = []
         for transcript_path in self.transcript_path_list:
-            local_file_path = os.path.join(DOWNLOAD_DIR, transcript_path.split("/")[-1])
-            download_file_from_s3(transcript_path, local_file_path)
-            local_transcript_paths.append(local_file_path)
+            local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, transcript_path.split("/")[-1])
+            download_file_from_s3(transcript_path, local_filepath)
+            local_transcript_paths.append(local_filepath)
         return local_transcript_paths
 
     def create_tool(self):
@@ -58,11 +58,11 @@ class CurrMeetingQueryEngine:
         self.transcript_path = fetch_curr_transcript_path(self.meeting_id)
 
     def handle_files_from_s3(self):
-        self.local_file_path = os.path.join(DOWNLOAD_DIR, self.transcript_path.split("/")[-1])
+        self.local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, self.transcript_path.split("/")[-1])
 
     def create_tool(self):
         self.handle_files_from_s3()
-        files = SimpleDirectoryReader(input_files=[self.local_file_path]).load_data()
+        files = SimpleDirectoryReader(input_files=[self.local_filepath]).load_data()
         curr_meeting_index = VectorStoreIndex.from_documents(files)
         curr_meeting_engine = curr_meeting_index.as_query_engine(similarity_top_k=3, llm=llm)
 

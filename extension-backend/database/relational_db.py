@@ -86,13 +86,11 @@ def insert_recording_path(meeting_id):
         return None
     
 
-def insert_image_path(meeting_id, image_identifier):
+def insert_image_path(meeting_id, image_path):
     '''
     Inserts image path into relational database
     '''
     try:
-        image_path = f"{global_vars.SCREENSHOTS_FOLDER}/{meeting_id}/{image_identifier}"
-
         sql = "INSERT INTO images(meeting_id, image_path) VALUES (%s, %s);"
         values = (meeting_id, image_path)
         conn_cursor.execute(sql, values)
@@ -216,7 +214,6 @@ def fetch_output_path(meeting_id):
         return None
     
 
-# need to change this to return the latest image path for current meeting so that it can be given as object_name whne uploading to s3
 def fetch_image_path(meeting_id):
     '''
     Retrieves image path from relational database
@@ -224,8 +221,8 @@ def fetch_image_path(meeting_id):
     try:
         sql = "SELECT image_path from images WHERE meeting_id=%s;"
         conn_cursor.execute(sql, (meeting_id, ))
-        image_path = conn_cursor.fetchone()[0]
-        return image_path
+        image_paths = [row[0] for row in conn_cursor.fetchall()]
+        return image_paths
     except (Exception, psycopg2.DatabaseError) as error:
         print("Database error in fetch_image_path(): ", error)
         return None

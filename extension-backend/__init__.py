@@ -6,8 +6,10 @@ from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from qdrant_client import QdrantClient
 from llama_index.llms.openai import OpenAI as LlamaOpenAI
-from langchain_openai import OpenAI as LangChainOpenAI, ChatOpenAI
+from langchain_openai import OpenAI as LangChainOpenAI, ChatOpenAI as LangChainChatOpenAI
 import openai
+from sentence_transformers import SentenceTransformer
+
 
 load_dotenv()
 
@@ -42,7 +44,7 @@ llm = LlamaOpenAI(model="gpt-4",
              temperature=0,
              )
 
-llm_chat = ChatOpenAI(model_name="gpt-3.5-turbo",
+llm_chat = LangChainChatOpenAI(model_name="gpt-3.5-turbo",
                       openai_api_key=os.getenv("OPENAI_API"),
                       temperature=0
                       )
@@ -50,6 +52,8 @@ llm_chat = ChatOpenAI(model_name="gpt-3.5-turbo",
 llm_vision = LangChainOpenAI(model="gpt-4-vision-preview", 
                     openai_api_key=os.getenv("OPENAI_API")
                     )
+
+embedding_model = SentenceTransformer("avsolatorio/GIST-Embedding-v0")
 
 s3_client = boto3.client("s3", 
                          aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
