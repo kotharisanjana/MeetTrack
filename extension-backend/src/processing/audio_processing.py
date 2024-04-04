@@ -4,6 +4,7 @@ from src.processing.video_processing import VideoProcessing
 from src.audio_to_text.transcript import combine_asr_diarization
 from database.relational_db import fetch_curr_transcript_path, fetch_diarization_path
 from common.aws_utilities import upload_file_to_s3
+import common.globals as global_vars
 
 class AudioProcessing:
     def __init__(self, session_data):
@@ -34,10 +35,16 @@ class AudioProcessing:
         diarization_path = fetch_diarization_path(self.meeting_id)
         upload_file_to_s3(self.local_diarization_path, diarization_path)
 
-        # merge transcription and diarization and get actual speakers
-        transcript_segments = self.asr_obj.create_transcript_segments()
-        speaker_segments = SpeakerIDsForTranscription().speaker_segments_pipeline(self.local_diarization_path)
-        audio_to_text_output = combine_asr_diarization(speaker_segments, transcript_segments)
+        transcript_fp_start = 0
+        diarization_fp_start = 0
+        audio_to_text_output = ""
+
+        # merge transcription and diarization and get actual speakers for every recording segment
+        while global_vars.RECORDING_GLOBAL_INDEX > 0:
+            transcript_segments, transcript_fp_start = self.asr_obj.create_transcript_segments(transcript_fp_start)
+            speaker_segments, diarization_fp_start = SpeakerIDsForTranscription().speaker_segments_pipeline(self.local_diarization_path, diarization_fp_start)
+            audio_to_text_output = audio_to_text_output + combine_asr_diarization(speaker_segments, transcript_segments) + "\n"
+            global_vars.RECORDING_GLOBAL_INDEX = global_vars.RECORDING_GLOBAL_INDEX - 1
 
         # update transcript file in local filesystem with final transcript with actual speakers
         with open(self.local_transcript_path, "w") as file:

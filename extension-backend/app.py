@@ -136,7 +136,7 @@ def process_recording():
   upload_file_to_s3(local_recording_path, recording_path)
 
   audio_processing_obj.online_audio_pipeline() 
-  image_processing_obj.online_image_pipeline() 
+  # image_processing_obj.online_image_pipeline() 
 
   return jsonify({"success": "Recording processed successfully"}), 200
 
@@ -158,25 +158,26 @@ def end_session():
   session_id = request.json.get("session_id")
   session_data = retrieve_session_data(session_id)
   meeting_id = session_data["meeting_id"]
-  local_transcript_file = session_data["local_transcript_path"]
+  local_transcript_path = session_data["local_transcript_path"]
   
   # generate final transcript with speaker diarization
+  audio_processing_obj = AudioProcessing(session_data)
   audio_processing_obj.offline_audio_pipeline()
 
   # generate textual component
   textual_component_obj = TextualComponent()
-  textual_component = textual_component_obj.textual_component_pipeline(local_transcript_file)
+  textual_component = textual_component_obj.textual_component_pipeline(local_transcript_path)
   # extract summary from textual component
   summary = textual_component_obj.extract_summary_from_textual_component(textual_component)
 
   # image-context and get image links
   if summary:
-    image_urls = VisualComponent(meeting_id).get_contextual_images_from_summary(summary)
+    image_url_desc_pairs = VisualComponent(meeting_id).get_contextual_images_from_summary(summary)
   else:
-    image_urls = []
+    image_url_desc_pairs = {}
 
   # merge into final output doc
-  create_final_doc(meeting_id, textual_component, image_urls)
+  create_final_doc(session_data, textual_component, image_url_desc_pairs)
 
   # email meeting notes to recipient
   send_email(session_data)
@@ -186,6 +187,8 @@ def end_session():
 
   # terminate session
   delete_session(session_id)
+
+  return jsonify({"status": "OK", "message": "Session ended successfully"}), 200
 
 
 if __name__ == "__main__":

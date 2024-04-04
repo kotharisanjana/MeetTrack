@@ -44,9 +44,13 @@ class VisualComponent:
             store_description_embedding(idx, self.meeting_id, image_url, embedding)
             idx += 1
 
+    def image_url_description_pairs(self, image_urls):
+        return dict((image_url, self.descriptions[image_url]) for image_url in image_urls)
+
     def get_contextual_images_from_summary(self, summary):
         self.get_image_urls()
         self.generate_image_descriptions()
         self.image_description_embedding()
         summary_embedding = self.create_embedding(summary)
-        return get_relevant_images(summary_embedding)
+        image_urls = get_relevant_images(summary_embedding)
+        return self.image_url_description_pairs(image_urls)

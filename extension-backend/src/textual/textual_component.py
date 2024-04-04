@@ -8,7 +8,7 @@ import re
 class TextualComponent:
     def get_meeting_transcript(self, local_transcript_file):
         with open(local_transcript_file, "r") as file:
-            self.transcript = file.read()        
+            self.transcript = file.read()    
 
     def create_document_from_transcript(self):
         chunk_size = 3000
@@ -79,7 +79,7 @@ class TextualComponent:
     
     def extract_summary_from_textual_component(self, textual_component):
         word1 = "Summary"
-        word2 = "Key Decisions"
+        word2 = "Action items:"
         pattern = re.escape(word1) + r'(.*?)' + re.escape(word2)
         match = re.search(pattern, textual_component, re.DOTALL)
         if match:

@@ -4,20 +4,19 @@ from qdrant_client.http import models
 
 def get_actual_speaker(speaker_id):
     identified_speaker_record = vector_db_client.retrieve(
-        collection_name="identified_speaker_embeddings",
+        collection_name="identified-speaker-embeddings",
         ids=[speaker_id],
         with_vectors=True
     )
     identified_speaker_vector = identified_speaker_record[0].vector
 
     speaker_match = vector_db_client.search(
-        collection_name="actual_speaker_embeddings", 
+        collection_name="actual-speaker-embeddings", 
         query_vector=identified_speaker_vector, 
         limit=1
     )
 
-    actual_speaker = speaker_match[0].id
-    
+    actual_speaker = speaker_match[0].payload["speaker"]    
     return actual_speaker
 
 def store_speaker_embedding(embeddings):

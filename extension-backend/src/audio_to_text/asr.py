@@ -23,7 +23,6 @@ class ASR:
   def create_transcript(self, transcript_path):
     with open(self.local_transcript_path, "a") as file:
         for segment in self.segments:
-          print(segment.text)
           text = "[ " + str(segment.start) + " -> " + str(segment.end) + " ]" + segment.text + "\n"
           file.write(text)
         file.write("*" + "\n")
@@ -38,14 +37,18 @@ class ASR:
     millisec = int(time[1][:3])
     return hour, min, sec, millisec
 
-  def create_transcript_segments(self):
+  def create_transcript_segments(self, transcript_fp_start):
     transcript_segments = []
 
     with open(self.local_transcript_path, "r") as file:
-        for line in file:
-          if len(line) < 2:
-            continue
+        for _ in range(transcript_fp_start):
+          file.readline()
 
+        for line in file:
+          if len(line) < 3:
+            transcript_fp_start += 1
+            return transcript_segments, transcript_fp_start
+          
           line_elements = line.split()
 
           start = line_elements[1]
@@ -59,7 +62,9 @@ class ASR:
           # inconsistency in transcription timestamps
           if end_time <= start_time:   # [ 121.24 -> 121.9 ] Thanks, Sam (end time should be 121.90) - handle this in the logic
               continue
+          
+          text = " ".join(line_elements[5:])
 
-          transcript_segments.append(Transcription(start_time, end_time, TranscribedText(line_elements[5:])))  
+          transcript_segments.append(Transcription(start_time, end_time, TranscribedText(text)))  
 
-        return transcript_segments
+          transcript_fp_start += 1

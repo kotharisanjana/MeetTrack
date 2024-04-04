@@ -57,13 +57,17 @@ class SpeakerIDsForTranscription:
         millisec = time_components[2][-3:]
         return int(hour), int(min), int(sec), int(millisec)
 
-    def create_speaker_segments(self, local_diarization_path):
+    def create_speaker_segments(self, local_diarization_path, diarization_fp_start):
         self.speaker_segments = []
 
         with open(local_diarization_path, "r") as file:
+            for _ in range(diarization_fp_start):
+                file.readline()
+
             for line in file:
-                if len(line) < 2:
-                    continue
+                if len(line) < 3:
+                    diarization_fp_start += 1
+                    return diarization_fp_start
 
                 segment_components = line.split()
 
@@ -76,13 +80,11 @@ class SpeakerIDsForTranscription:
                 start_time = get_unixtime(start_hour, start_min, start_sec, start_millisec)
                 end_time = get_unixtime(end_hour, end_min, end_sec, end_millisec)
 
-                # to handle incorrect diarization where a slight change in tone of the existing speaker is changing speaker id -> error
-                if end_time - start_time < 1:
-                    continue
-
                 speaker = Speaker(segment_components[5].split("_")[1])
                 speaker_identification_obj = SpeakerIdentification(start_time, end_time, speaker)
                 self.speaker_segments.append(speaker_identification_obj)
+
+                diarization_fp_start += 1
 
     def merge_speaker_segments(self):
         l = len(self.speaker_segments)
@@ -107,6 +109,6 @@ class SpeakerIDsForTranscription:
 
         return speaker_duration
 
-    def speaker_segments_pipeline(self, local_diarization_path):
-        self.create_speaker_segments(local_diarization_path)
-        return self.merge_speaker_segments()
+    def speaker_segments_pipeline(self, local_diarization_path, diarization_fp_start):
+        fp_start = self.create_speaker_segments(local_diarization_path, diarization_fp_start)
+        return self.merge_speaker_segments(), fp_start
