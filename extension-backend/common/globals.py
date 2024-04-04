@@ -11,4 +11,6 @@ TRANSCRIPTION_FOLDER = "transcription"
 DIARIZATION_FOLDER = "diarization"
 OUTPUT_FOLDER = "finaldocument"
 
-DOWNLOAD_DIR = "/home/sanjana/Desktop/Masters_Project/MeetTrack/testing"
+DOWNLOAD_DIR = "/home/sanjana/Desktop/Masters_Project/testing"
+
+LOGGING_FILE = "/home/sanjana/Desktop/Masters_Project/logs/logs.log"

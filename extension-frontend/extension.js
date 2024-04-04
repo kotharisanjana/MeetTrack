@@ -8,6 +8,7 @@ const processingQueue = [];
 let isProcessing = false;
 
 document.addEventListener("DOMContentLoaded", function () {
+  // get all DOM elements
   var meetingDetailsForm = document.querySelector(".meetingDetailsForm");
   var sessionIDForm = document.querySelector('.sessionIDForm');
   var emailIDForm = document.querySelector(".emailIDForm");
@@ -15,10 +16,11 @@ document.addEventListener("DOMContentLoaded", function () {
   var stopRecordingButton = document.getElementById("stopRecordingButton");
   var userInputForm = document.getElementById("userInputForm");
   var endButton = document.getElementById("endButton");
+
   
   meetingDetailsForm.addEventListener("submit", function (event) {
     event.preventDefault();
-    var name = document.getElementById('meetingName').value;
+    var meetingName = document.getElementById('meetingName').value;
     var meetingType = document.querySelector('input[name="meetingType"]:checked').value;
 
     fetch("http://localhost:5000/submit-details", {
@@ -26,13 +28,20 @@ document.addEventListener("DOMContentLoaded", function () {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ name: name, meetingType: meetingType})
+      body: JSON.stringify({ name: meetingName, meetingType: meetingType})
     })
-    .then(response => response.json())
+    .then(response => {
+      if (response.status === 200) {
+        return response.json();
+      } else {
+        return response.json().then(data => {
+          alert(data.message);
+          throw new Error(data.message);
+        });
+      }
+    })
     .then(data => {
-      if (data.status === "OK") {
-        alert("Session ID: " + data.session_id);
-      } 
+      alert("Session ID: \n" + data.session_id);
     })
     .catch(error => console.error("Error:", error));
 
@@ -63,6 +72,11 @@ document.addEventListener("DOMContentLoaded", function () {
           endButton.classList.remove("disabled");
 
           return response.json();
+      } else {
+        return response.json().then(data => {
+          alert(data.message);
+          throw new Error(data.message);
+        });
       }
     })
     .then(data => {
@@ -70,6 +84,7 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .catch(error => console.error("Error:", error));
   });
+
 
   startRecordingButton.addEventListener("click", function () {
     chrome.runtime.sendMessage({
@@ -84,6 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+
   emailIDForm.addEventListener("submit", async function (event) {
     event.preventDefault();
     var email = document.getElementById('emailID').value;
@@ -96,8 +112,18 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       body: JSON.stringify({ session_id: session_id, email: email })
     })
-    .then(response => response.json())
+    .then(response => {
+      if (response.status === 200) {
+        return response.json();
+      } else  {
+        return response.json().then(data => {
+          alert(data.message);
+          throw new Error(data.message);
+        });
+      }
+    })
     .then(data => {
+      alert(data.message);
     })
     .catch(error => console.error("Error:", error));
   });
@@ -119,16 +145,21 @@ document.addEventListener("DOMContentLoaded", function () {
       })
     })
     .then(response => {
-      if (response.status !== 200) {
-        throw new Error('Network response was not ok');
+      if (response.status === 200) {
+        return response.json();
+      } else {
+        return response.json().then(data => {
+          textDisplay.textContent = data.message;
+          throw new Error(data.message);
+        });
       }
-      return response.json();
     })
     .then(data => {
-      textDisplay.textContent = data.data;
+      textDisplay.textContent = data.message;
     })
     .catch(error => console.error("Error:", error));
   });
+
 
   endButton.addEventListener("click", async function () {
     session_id = localStorage.getItem("session_id");
@@ -141,13 +172,17 @@ document.addEventListener("DOMContentLoaded", function () {
       body: JSON.stringify({ session_id: session_id })
     })
     .then(response => {
-      if (response.status !== 200) {
-        throw new Error('Network response was not ok');
+      if (response.status === 200) {
+        return response.json();
+      } else {
+        return response.json().then(data => {
+          throw new Error(data.message);
+        });
       }
-      return response.json();
     })
     .then(data => {
       alert(data.message);
+      localStorage.clear();
     })
     .catch(error => console.error("Error:", error));
   });
@@ -160,7 +195,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
       startRecording(message.data);
       break;
     case "stop-recording":
-      console.log(message.type);
       fullShutdown = true;
       stopRecording();
       break;
@@ -174,11 +208,12 @@ async function startRecording(streamId) {
     session_id = localStorage.getItem("session_id");
     recording_status = localStorage.getItem("recording_status");
 
+    // check if recording is already enabled for the current meeting
     if (recording_status === "false") {
       recordingStatusResponse = await checkRecordingStaus(session_id);
     }
 
-    if (recording_status === "true" || recordingStatusResponse.status === "OK") {
+    if (recording_status === "true" || recordingStatusResponse.status === 200) {
       if (recording_status === "false"){
         alert(recordingStatusResponse.message);
       }
@@ -210,15 +245,17 @@ async function startRecording(streamId) {
           mediaStreamFlag = false;
         }
       } catch (error) {
-        console.error("Error starting tab capture:", error);
+        console.error("Error:", error);
       };
 
+      // create media recorder and push data to the data array
       recorder = new MediaRecorder(media, { mimeType: "video/webm" });
 
       recorder.ondataavailable = (event) => {
         data.push(event.data);
       }
 
+      // add recording to queue for processing when recording stops
       recorder.onstop = async () => {
         const blob = new Blob(data, { type: "video/webm" });
         const recordingUrl = URL.createObjectURL(blob);
@@ -238,23 +275,24 @@ async function startRecording(streamId) {
       // Start the recorder
       if (recorderStateFlag) {
         recorder.start();
+
+        // Set a timer to stop the recording after 30 seconds 
         stopTimer = setTimeout(async () => {
           await stopRecording();
         }, 30000);
       }
-    } else if (recordingStatusResponse.status === 400) {
-      alert("Recording is already in progress.");
     } else {
-      throw new Error("Unexpected response status: " + recordingStatusResponse.status);
-    }
+      alert(recordingStatusResponse.message);
+      throw new Error(recordingStatusResponse.message);
+    } 
   } catch (error) {
-    console.error("Error starting tab capture:", error);
+    console.error("Error:", error);
   }
 }
 
 
 async function checkRecordingStaus(session_id){
-  const recordingStatusResponse = await fetch("http://localhost:5000/check-recording-status", {
+  const recordingStatusResponse = await fetch("http://localhost:5000/recording-status", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -271,12 +309,13 @@ function addToQueue(blob, session_id) {
 }
 
 
-// Function to process tasks from the queue
+// Function to process recordings from the queue
 async function processQueue() {
-  console.log("Processing queue", processingQueue.length);
   if (!isProcessing && processingQueue.length > 0) {
       isProcessing = true;
-      const task = processingQueue.shift(); // Get the next task from the queue
+
+      // Get the next task from the queue
+      const task = processingQueue.shift(); 
       try {
           processRecording(task.blob, task.session_id)
               .then(() => {
@@ -284,12 +323,12 @@ async function processQueue() {
                   processQueue();
               })
               .catch((error) => {
-                  console.error("Error processing task:", error);
+                  console.error("Error:", error);
                   isProcessing = false;
                   processQueue();
               });
       } catch (error) {
-          console.error("Error processing task:", error);
+          console.error("Error:", error);
           isProcessing = false;
           processQueue();
       }
@@ -303,20 +342,17 @@ async function processRecording(blob, session_id){
     formData.append("recording", blob);
     formData.append("session_id", session_id);
 
-    const resp = await fetch("http://localhost:5000/process-recording", {
+    const processRecordingResponse = await fetch("http://localhost:5000/process-recording", {
         method: "POST",
         body: formData
     })
 
-    if (resp.status === 200) {
-      console.log("Meeting recording processed successfully.");
-    } else if (resp.status === 400) {
+    if (processRecordingResponse.status !== 200) {
       alert("Error in recording.");
-    } else {
-      throw new Error("Unexpected response status: " + response.status);
-    }
+      throw new Error(processRecordingResponse.message);
+    } 
   } catch (error) {
-    console.error("Error in recording:", error);
+    console.error("Error:", error);
   }
 }
 
@@ -327,7 +363,6 @@ async function stopRecording() {
 
     if (fullShutdown)
     {
-      console.log("stopping")
       recorder.stream.getTracks().forEach((t) => t.stop());
       recorderStateFlag = false;
       alert("Recording stopped");

@@ -1,5 +1,6 @@
 from common.aws_utilities import get_s3_image_bytes, upload_file_to_s3
 from database.relational_db import fetch_output_path
+
 from docx import Document
 from docx.shared import Inches
 from io import BytesIO
@@ -14,6 +15,7 @@ def create_final_doc(session_data, textual_component, image_url_desc_pairs):
     header = "Meeting Name: " + meeting_name + "\n" + "Meeting Date: " + meeting_date
 
     doc = Document()
+    # Add meeting details and textual component to the document
     doc.add_paragraph(header)
     doc.add_paragraph(textual_component)
     
@@ -30,11 +32,12 @@ def create_final_doc(session_data, textual_component, image_url_desc_pairs):
             display_width = min(4.0, width / 72) 
             display_height = display_width * aspect_ratio
 
-            # Add image to the document
+            # Add image and its description to the document
             image_stream = BytesIO(image_bytes)
             doc.add_picture(image_stream, width=Inches(display_width), height=Inches(display_height))
             doc.add_paragraph("Image description: " + desc)
             
+    # save output document locally and upload to S3
     doc.save(local_output_path)
     output_path = fetch_output_path(meeting_id)
     upload_file_to_s3(local_output_path, output_path)

@@ -1,9 +1,8 @@
 import common.globals as global_vars
-from __init__ import s3_client
+from __init__ import s3_client, logger
+
 from io import BytesIO
 from PIL import Image
-from botocore.exceptions import NoCredentialsError
-
 
 # ------------------- Uploads -------------------
 
@@ -11,22 +10,29 @@ def upload_frame_to_s3(object, object_key):
     """
     Upload a single frame to S3 bucket.
 
-    :param frame: Numpy array representing an image.
-    :param bucket_name: Name of the S3 bucket.
-    :param object_name: Object name in S3.
+    :param object: Numpy array representing an image.
+    :param object_key: Key of the object in the bucket.
+    :return: True if frame was uploaded, else False.
     """
     # Convert the numpy frame to an image in memory
     img = Image.fromarray(object)
     buffer = BytesIO()
     img.save(buffer, format="PNG") 
     buffer.seek(0)
+
     # Upload the image to S3
-    s3_client.upload_fileobj(buffer, global_vars.S3_BUCKET, object_key)
+    try:
+        s3_client.upload_fileobj(buffer, global_vars.S3_BUCKET, object_key)
+        logger.info(f"Frame {object_key} uploaded successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Frame {object_key} upload failed: {e}")
+        return False
 
 
 def upload_file_to_s3(object, object_key):
     """
-    Upload a file to an S3 bucket.
+    Upload a file to S3 bucket.
 
     :param object: File to upload.
     :param object_key: Key of the object in the bucket.
@@ -34,66 +40,44 @@ def upload_file_to_s3(object, object_key):
     """
     try:
         s3_client.upload_file(object, global_vars.S3_BUCKET, object_key)
-        print(f"File uploaded successfully")
+        logger.info(f"File {object_key} uploaded successfully")
         return True
-    except NoCredentialsError:
-        print("Credentials not available")
-        return False
     except Exception as e:
-        print(f"Upload failed: {e}")
+        logger.error(f"File {object_key} upload failed: {e}")
         return False
 
 # ------------------- Downloads -------------------
     
 def get_s3_image_bytes(object_key):
     """
-    Fetch an image from an S3 bucket.
+    Fetch an image from S3 bucket.
     
-    :param bucket_name: Name of the S3 bucket
-    :param key: Key (path) of the image within the bucket
+    :param object_key: Key of the object in the bucket
     :return: Image bytes
     """
-    response = s3_client.get_object(Bucket=global_vars.S3_BUCKET, Key=object_key)
-    return response['Body'].read()
+    try:
+        response = s3_client.get_object(Bucket=global_vars.S3_BUCKET, Key=object_key)
+        logger.info(f"Image {object_key} fetched successfully")
+        return response['Body'].read()
+    except Exception as e:
+        logger.error(f"Image {object_key} fetch failed: {e}")
+        return None
 
 
 def download_file_from_s3(object_key, local_filepath):
     """
     Download a file from S3 to a local file path.
 
-    :param bucket_name: Name of the S3 bucket.
     :param object_key: Key of the object to download.
     :param local_filepath: Local path to save the downloaded file.
+    :return: True if file was downloaded, else False.
     """
     try:
         s3_client.download_file(global_vars.S3_BUCKET, object_key, local_filepath)
-        print(f"File downloaded successfully to {local_filepath}")
+        logger.info(f"File {object_key} downloaded successfully")
         return True
-    except NoCredentialsError:
-        print("Credentials not available")
-        return False
     except Exception as e:
-        print(f"Error downloading file: {e}")
+        logger.error(f"File {object_key} download failed: {e}")
         return False
         
 
-def download_textfile_from_s3(object_key, local_filepath=None):
-    """
-    Download a file from S3 and return its content as a string.
-
-    :param s3_client: Boto3 S3 client.
-    :param object_key: Key of the object to download.
-    :return: Content of the downloaded file as a string, or None if download fails.
-    """
-    try:
-        file_content = BytesIO()
-        s3_client.download_fileobj(global_vars.S3_BUCKET, object_key, file_content, local_filepath)
-        file_content.seek(0)
-        file_content_str = file_content.read().decode('utf-8')
-        return file_content_str
-    except NoCredentialsError:
-        print("Credentials not available")
-        return None
-    except Exception as e:
-        print(f"Error downloading file: {e}")
-        return None

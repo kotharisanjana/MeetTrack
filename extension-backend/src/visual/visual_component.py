@@ -1,4 +1,4 @@
-from __init__ import llm_vision, embedding_model
+from __init__ import llm_vision, embedding_model, logger
 from database.vector_db import store_description_embedding, get_relevant_images
 from database.relational_db import fetch_image_path
 
@@ -7,6 +7,7 @@ class VisualComponent:
         self.meeting_id = meeting_id
 
     def get_image_urls(self):
+        # get list of image url for the current meeting from S3
         self.image_urls = fetch_image_path(self.meeting_id)
 
     def generate_image_descriptions(self):
@@ -14,12 +15,13 @@ class VisualComponent:
 
         for image_url in self.image_urls:
             try:
+                # use LLM to generate description for the image
                 response = llm_vision.chat.completions.create(
                     messages=[
                         {
                             "role": "user",
                             "content": [
-                                {"type": "text", "text": "What is in this image? Describe it in 3 lines"},
+                                {"type": "text", "text": "Describe this image in detail for a mixed audience in a meeting."},
                                 {"type": "image_url", "image_url": {"url": image_url}},
                             ],
                         }
@@ -30,8 +32,8 @@ class VisualComponent:
                 desc = response.choices[0].message.content
                 self.descriptions[image_url] = desc.strip()
             except Exception as e:
-                print(f"Error processing {image_url}: {e}")
                 self.descriptions[image_url] = "Error retrieving description for this image"
+                logger.error(f"Error generating description for image {image_url}: {e}")
 
     def create_embedding(self, text):
         embedding = embedding_model.encode(text)

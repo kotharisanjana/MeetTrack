@@ -7,6 +7,7 @@ class TranscribedText:
     self.text = text
 
 class Transcription:
+  # transcript segment object class
   def __init__(self, start_time, end_time, text):
     self.start_time = start_time
     self.end_time = end_time
@@ -21,13 +22,19 @@ class ASR:
     self.segments, _ = asr_model.transcribe(audio=meeting_audio, language="en")
 
   def create_transcript(self, transcript_path):
+    # append transcript segment to local file and upload to S3 bucket
     with open(self.local_transcript_path, "a") as file:
         for segment in self.segments:
           text = "[ " + str(segment.start) + " -> " + str(segment.end) + " ]" + segment.text + "\n"
           file.write(text)
+
+        # * marks end of one segment
         file.write("*" + "\n")
+
     upload_file_to_s3(self.local_transcript_path, transcript_path)
 
+
+class TranscriptSegments():
   def extract_time(self, time):
     time = time.split(".")
     seconds = int(time[0])
@@ -37,14 +44,16 @@ class ASR:
     millisec = int(time[1][:3])
     return hour, min, sec, millisec
 
-  def create_transcript_segments(self, transcript_fp_start):
+  def transcript_segments_pipeline(self, transcript_fp_start):
     transcript_segments = []
 
     with open(self.local_transcript_path, "r") as file:
+        # read segment individually to process
         for _ in range(transcript_fp_start):
           file.readline()
 
         for line in file:
+          # return on end of segment
           if len(line) < 3:
             transcript_fp_start += 1
             return transcript_segments, transcript_fp_start
@@ -60,11 +69,12 @@ class ASR:
           end_time = get_unixtime(hour, min, sec, millisec)
 
           # inconsistency in transcription timestamps
-          if end_time <= start_time:   # [ 121.24 -> 121.9 ] Thanks, Sam (end time should be 121.90) - handle this in the logic
+          if end_time <= start_time:
               continue
           
           text = " ".join(line_elements[5:])
 
+          # append to list of transcript segments
           transcript_segments.append(Transcription(start_time, end_time, TranscribedText(text)))  
 
           transcript_fp_start += 1

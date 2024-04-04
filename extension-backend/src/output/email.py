@@ -1,5 +1,7 @@
 from common.aws_utilities import download_file_from_s3
 from database.relational_db import fetch_email, fetch_output_path
+from __init__ import logger
+
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -12,6 +14,7 @@ def send_email(session_data):
     meeting_date = session_data["meeting_date"]
     local_output_path = session_data["local_output_path"]
     
+    # download final document from S3
     output_path = fetch_output_path(meeting_id)
     download_file_from_s3(output_path, local_output_path)
 
@@ -39,13 +42,13 @@ def send_email(session_data):
     part["Content-Disposition"] = f'attachment; filename="{os.path.basename(local_output_path)}"'
     msg.attach(part)
 
-    # setup the SMTP server
+    # setup the SMTP server and send email to the recipient
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
-        print("Email sent successfully!")
+        logger.info(f"Email sent successfully")
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        logger.error(f"Error sending email: {e}")

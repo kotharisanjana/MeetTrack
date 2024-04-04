@@ -20,19 +20,21 @@ class ParticipantVoiceEmbeddings:
         self.client = QdrantClient(url=os.getenv("VECTOR_DB_URL"), api_key=os.getenv("VECTOR_DB_API"))
     
     def read_audio_file(self, audio_filepath):
+        # read audio file
         self.samplerate, self.data = wavfile.read(audio_filepath)
 
     def transform_audio(self):
         # audio needs to be converted from stereo to mono
         if len(self.data.shape) == 2:
             self.data = np.mean(self.data, axis=1)
-        # Convert the data to a torch tensor and add a channel dimension
+        # convert the data to a torch tensor and add a channel dimension
         self.tensor_data = torch.tensor(self.data).float().unsqueeze(0)
 
     def create_voice_embedding(self):
         _, self.embedding = self.pipeline({"waveform": self.tensor_data, "sample_rate": self.samplerate}, return_embeddings=True)
 
     def store_voice_embedding(self, speaker_name):
+        # insert voice emebdding into vector database
         self.client.upsert(
             collection_name="actual-speaker-embeddings",
             wait=True,
@@ -49,5 +51,5 @@ class ParticipantVoiceEmbeddings:
             self.create_voice_embedding()
             self.store_voice_embedding(filename.split(".")[0], self.embedding)
 
-
+# run the pipeline
 ParticipantVoiceEmbeddings().voice_embedding_pipeline()
