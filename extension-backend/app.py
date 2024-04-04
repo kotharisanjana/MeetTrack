@@ -1,10 +1,13 @@
 import common.globals as global_vars
-from common.aws_utilities import *
+from common.aws_utilities import upload_file_to_s3
+from common.utils import delete_files
 from database.cache import *
 from database.relational_db import *
 from src.user_interaction.query_engine import UserInteraction, setup_prev_meeting_query_engine
-from src.processing.realtime_processing import OnlineAudioProcessing
+from src.processing.audio_processing import AudioProcessing
+from src.processing.image_processing import ImageProcessing
 from src.textual.textual_component import TextualComponent
+from src.visual.visual_component import VisualComponent
 from src.output.final_doc import create_final_doc
 from src.output.email import send_email
 from flask import Flask, jsonify, request
@@ -12,7 +15,6 @@ from flask_session import Session
 import json
 import os
 from flask_cors import CORS
-import time
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -29,8 +31,10 @@ CORS(app)
 Session(app)
 
 prev_meeting_tool = None
+audio_processing_obj = None
+image_processing_obj = None
+user_interaction_obj = None
 
-# refactor and place in correct file
 def on_submit_meeting_details(session_id):
   redis_client = get_redis_client()
   session_data = retrieve_session_data(session_id)
@@ -46,10 +50,24 @@ def on_submit_meeting_details(session_id):
       global prev_meeting_tool
       prev_meeting_tool = setup_prev_meeting_query_engine(session_data["meeting_name"], meeting_id)
 
-   # update session_data in redis
+  # update session_data in redis
   session_data["meeting_id"] = meeting_id 
+  session_data["local_recording_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm")
+  session_data["local_audio_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_audio.wav")
+  session_data["local_transcript_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_transcript.txt")
+  session_data["local_diarization_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_diarization.txt")
+  session_data["local_output_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_output.docx")
   updated_session_json = json.dumps(session_data)
   redis_client.set(session_id, updated_session_json)
+
+  global audio_processing_obj
+  audio_processing_obj = AudioProcessing(session_data)
+
+  global image_processing_obj
+  image_processing_obj = ImageProcessing(session_data)
+
+  global user_interaction_obj
+  user_interaction_obj = UserInteraction(session_data["meeting_id"], session_data["meeting_name"])
 
 
 @app.route("/submit-details", methods=["POST"])
@@ -90,8 +108,7 @@ def submit_recipient_email():
 @app.route("/check-recording-status", methods=["POST"])
 def check_recording_status():
   session_id = request.json.get("session_id")
-  # this needs to be awaited
-  meeting_id = fetch_meeting_id(session_id)
+  meeting_id = retrieve_session_data(session_id)["meeting_id"]
 
   if fetch_recording_status(meeting_id):
     return jsonify({"status": "error", "message": "Recording already in progress."}), 400
@@ -106,29 +123,29 @@ def process_recording():
     return jsonify({"error": "No recording file provided"}), 400
   
   session_id = request.form.get("session_id")
-  meeting_id = retrieve_session_data(session_id)["meeting_id"]
   meeting_recording = request.files["recording"]
 
-  local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm")
-  meeting_recording.save(local_filepath)
+  session_data = retrieve_session_data(session_id)
+  meeting_id = session_data["meeting_id"]
+  local_recording_path = session_data["local_recording_path"]
+  
+  meeting_recording.save(local_recording_path)
 
   # upload meeting recording to s3 and store path in relational database
   recording_path = insert_recording_path(meeting_id)
-  upload_file_to_s3(os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm"), recording_path)
+  upload_file_to_s3(local_recording_path, recording_path)
 
-  OnlineAudioProcessing(local_filepath, meeting_id).audio_pipeline()  
+  audio_processing_obj.online_audio_pipeline() 
+  # image_processing_obj.online_image_pipeline() 
 
   return jsonify({"success": "Recording processed successfully"}), 200
 
   
 @app.route("/answer-query", methods=["POST"])
 def answer_query():
-  session_id = request.json.get("session_id")
   user_query = request.json.get("userInput")
 
-  session_data = retrieve_session_data(session_id)
-
-  response = UserInteraction(session_data["meeting_id"], session_data["meeting_name"]).query_response_pipeline(prev_meeting_tool, user_query)
+  response = user_interaction_obj.query_response_pipeline(prev_meeting_tool, user_query)
 
   if response:
     return jsonify({"status": "OK", "data": response}), 200
@@ -136,22 +153,42 @@ def answer_query():
     return jsonify({"status": "error", "data": "No response found for query. Please try again"}), 400
 
 
-# this should create all textual components, create meeting notes doc by combining text and images, and dispose all resources
-# @app.route("/processing-after-tab-close", methods=["POST"])
-# def processing_after_tab_close():
-#   session_id = request.json.get("session_id")
-#   session_data = retrieve_session_data(session_id)
-#   meeting_name = session_data["meeting_name"]
-#   meeting_date = session_data["meeting_date"]
-#   meeting_id = session_data["meeting_id"]
-
-#   recipient_email = fetch_email(meeting_id)
+@app.route("/end-session", methods=["POST"])
+def end_session():
+  session_id = request.json.get("session_id")
+  session_data = retrieve_session_data(session_id)
+  meeting_id = session_data["meeting_id"]
+  local_transcript_path = session_data["local_transcript_path"]
   
-#   textual_component = TextualComponent().textual_component_pipeline(meeting_id)
-#   output_path = fetch_output_path(meeting_id)
-#   create_final_doc(textual_component, image_keys, output_path)
-#   send_email(output_path, local_file_path, recipient_email, meeting_name, meeting_date)
-#   pass
+  # generate final transcript with speaker diarization
+  audio_processing_obj = AudioProcessing(session_data)
+  audio_processing_obj.offline_audio_pipeline()
+
+  # generate textual component
+  textual_component_obj = TextualComponent()
+  textual_component = textual_component_obj.textual_component_pipeline(local_transcript_path)
+  # extract summary from textual component
+  summary = textual_component_obj.extract_summary_from_textual_component(textual_component)
+
+  # image-context and get image links
+  if summary:
+    image_url_desc_pairs = VisualComponent(meeting_id).get_contextual_images_from_summary(summary)
+  else:
+    image_url_desc_pairs = {}
+
+  # merge into final output doc
+  create_final_doc(session_data, textual_component, image_url_desc_pairs)
+
+  # email meeting notes to recipient
+  send_email(session_data)
+
+  # delete files from local file system
+  delete_files(meeting_id)
+
+  # terminate session
+  delete_session(session_id)
+
+  return jsonify({"status": "OK", "message": "Session ended successfully"}), 200
 
 
 if __name__ == "__main__":

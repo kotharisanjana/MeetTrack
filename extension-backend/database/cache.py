@@ -46,3 +46,7 @@ def retrieve_session_data(session_id):
         return session_data
     else:
         return {}
+    
+def delete_session(session_id):
+    redis_client = get_redis_client()
+    redis_client.delete(session_id)

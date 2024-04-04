@@ -9,7 +9,7 @@
       font-family: "Times New Roman", Times, serif;
       padding: 5px;
       width: 400px;
-      font-size: 16px;
+      font-size: 15px;
     }
     #header {
       display: flex;
@@ -61,7 +61,7 @@
   <div class="input-container" style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div>
       <form class="meetingDetailsForm">
-        <input id="meetingName" placeholder="Meeting Name"><br><br>
+        <input type="text" id="meetingName" placeholder="Meeting Name"><br><br>
         <input type="radio" id="recurring" name="meetingType" value="recurring">
         <label for="recurring">Recurring</label><br>
         <input type="radio" id="nonRecurring" name="meetingType" value="non_recurring">
@@ -69,8 +69,6 @@
         <button type="submitDetails">Submit</button>
       </form>
     </div>
-
-    <div class="separator" style="text-align: center; margin-top: 70px; font-size: 20px;">OR</div>
 
     <form class="sessionIDForm">
       <input type="text" id="sessionID" placeholder="Session ID"><br><br>
@@ -86,8 +84,6 @@
     </form>
   </div>
 
-  <br>
-
   <h4 style="display: inline;">Record meeting</h4>
   <button id="startRecordingButton" class="disabled" style="display: inline;">Start</button>
   <button id="stopRecordingButton" class="disabled" style="display: inline;">Stop</button>
@@ -98,7 +94,9 @@
     <button type="submitQuery">Submit</button>
   </form>
 
-  <div id="textDisplay"></div>
+  <div id="textDisplay"></div><br>
+
+  <button id="endButton" class="disabled">End</button>
 
   <script src="extension.js"></script>
 

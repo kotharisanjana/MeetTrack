@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var startRecordingButton = document.getElementById("startRecordingButton");
   var stopRecordingButton = document.getElementById("stopRecordingButton");
   var userInputForm = document.getElementById("userInputForm");
+  var endButton = document.getElementById("endButton");
   
   meetingDetailsForm.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -59,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {
           startRecordingButton.classList.remove("disabled");
           stopRecordingButton.classList.remove("disabled");
           userInputForm.classList.remove("disabled");
+          endButton.classList.remove("disabled");
 
           return response.json();
       }
@@ -124,6 +126,28 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .then(data => {
       textDisplay.textContent = data.data;
+    })
+    .catch(error => console.error("Error:", error));
+  });
+
+  endButton.addEventListener("click", async function () {
+    session_id = localStorage.getItem("session_id");
+
+    await fetch("http://localhost:5000/end-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ session_id: session_id })
+    })
+    .then(response => {
+      if (response.status !== 200) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      alert(data.message);
     })
     .catch(error => console.error("Error:", error));
   });
