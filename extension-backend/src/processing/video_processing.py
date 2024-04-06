@@ -8,6 +8,7 @@ class VideoProcessing:
         self.meeting_id = meeting_id
 
     def extract_audio(self, local_audio_path):
+        # extracts audio from webm and saves it locally as .wav file
         ffmpeg_extract_audio(self.local_recording_path, local_audio_path)
         
     def capture_screenshots(self, interval=20):

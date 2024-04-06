@@ -1,8 +1,9 @@
+from __init__ import llm_chat
+
 from langchain.chains.summarize import load_summarize_chain
 from langchain.docstore.document import Document
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
-from __init__ import llm_chat
 import re
 
 class TextualComponent:
@@ -10,9 +11,10 @@ class TextualComponent:
         with open(local_transcript_file, "r") as file:
             self.transcript = file.read()    
 
-    def create_document_from_transcript(self):
+    def process_transcript(self):
         chunk_size = 3000
         chunk_overlap = 200
+
         # Split the source text
         text_splitter = CharacterTextSplitter(
             chunk_size=chunk_size,
@@ -20,10 +22,12 @@ class TextualComponent:
             length_function=len,
         )
         transcript_chunks = text_splitter.split_text(self.transcript)
+
         # Create Document objects for the chunks
         self.docs = [Document(page_content=t) for t in transcript_chunks[:]]
 
     def generate_textual_component(self):
+        # chain of density prompting for textual component generation
         target_len = 500
         
         prompt_template = """
@@ -70,14 +74,16 @@ class TextualComponent:
         )
         resp = chain({"input_documents": self.docs}, return_only_outputs=True)
         textual_component = resp["output_text"]
+
         return textual_component
 
     def textual_component_pipeline(self, local_transcript_file):
         self.get_meeting_transcript(local_transcript_file)
-        self.create_document_from_transcript()
+        self.process_transcript()
         return self.generate_textual_component()
     
     def extract_summary_from_textual_component(self, textual_component):
+        # extract meeting summary from textual component
         word1 = "Summary"
         word2 = "Action items:"
         pattern = re.escape(word1) + r'(.*?)' + re.escape(word2)

@@ -1,19 +1,12 @@
 import common.globals as global_vars
-from common.aws_utilities import upload_file_to_s3
-from common.utils import delete_files
-from database.cache import *
-from database.relational_db import *
-from src.user_interaction.query_engine import UserInteraction, setup_prev_meeting_query_engine
-from src.processing.audio_processing import AudioProcessing
-from src.processing.image_processing import ImageProcessing
-from src.textual.textual_component import TextualComponent
-from src.visual.visual_component import VisualComponent
-from src.output.final_doc import create_final_doc
-from src.output.email import send_email
+from database.cache import retrieve_session_data, create_session, get_session_id
+from database.relational_db import insert_email, fetch_recording_status, insert_recording_status
+from src.processing.meeting_start import on_start_processing, user_interaction_obj, prev_meeting_tool
+from src.processing.meeting_end import on_end_processing
+from src.processing.recording_processing import save_recording, process_recording
+
 from flask import Flask, jsonify, request
 from flask_session import Session
-import json
-import os
 from flask_cors import CORS
 
 # Initialize the Flask application
@@ -30,165 +23,126 @@ CORS(app)
 # Initialize the session mechanism
 Session(app)
 
-prev_meeting_tool = None
-audio_processing_obj = None
-image_processing_obj = None
-user_interaction_obj = None
-
-def on_submit_meeting_details(session_id):
-  redis_client = get_redis_client()
-  session_data = retrieve_session_data(session_id)
-
-  insert_meeting_info(session_data)
-  meeting_id = fetch_meeting_id(session_data["session_id"])
-  insert_s3_paths(meeting_id)
-
-  # setup previous meeting query engine
-  if session_data["meeting_type"] == "recurring":
-    first_occurence = check_first_occurence(session_data["meeting_name"], meeting_id)
-    if not first_occurence:
-      global prev_meeting_tool
-      prev_meeting_tool = setup_prev_meeting_query_engine(session_data["meeting_name"], meeting_id)
-
-  # update session_data in redis
-  session_data["meeting_id"] = meeting_id 
-  session_data["local_recording_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_recording.webm")
-  session_data["local_audio_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_audio.wav")
-  session_data["local_transcript_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_transcript.txt")
-  session_data["local_diarization_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_diarization.txt")
-  session_data["local_output_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}_output.docx")
-  updated_session_json = json.dumps(session_data)
-  redis_client.set(session_id, updated_session_json)
-
-  global audio_processing_obj
-  audio_processing_obj = AudioProcessing(session_data)
-
-  global image_processing_obj
-  image_processing_obj = ImageProcessing(session_data)
-
-  global user_interaction_obj
-  user_interaction_obj = UserInteraction(session_data["meeting_id"], session_data["meeting_name"])
-
-
 @app.route("/submit-details", methods=["POST"])
 def submit_details():
-  meeting_name = request.json.get("name")
-  meeting_type = request.json.get("meetingType")
+  try:
+    meeting_name = request.json.get("meetingName")
+    meeting_type = request.json.get("meetingType")
 
-  session_id = get_session_id(meeting_name)
+    if not meeting_name or not meeting_type:
+      return jsonify({"message": "Meeting name and type are required."}), 400
 
-  if session_id is None:
-    session_id = create_session(meeting_name, meeting_type)
-    on_submit_meeting_details(session_id)
+    session_id = get_session_id(meeting_name)
+
+    if session_id is None:
+      # create session if it doesn't exist
+      session_id = create_session(meeting_name, meeting_type)
+      
+      # perform initial steps for providing assistance during meeting
+      on_start_processing(session_id)
+    return jsonify({"session_id": session_id}), 200
+  except Exception as e:
+        return jsonify({"message": str(e)}), 500
   
-  return jsonify({"status": "OK", "session_id": session_id}), 200
-
 
 @app.route("/access-session", methods=["POST"])
 def access_session():
-  session_id = request.json.get("session_id")
-  if session_id:
-    session_data = retrieve_session_data(session_id)
-    if session_data:
-        return jsonify({"status": "OK", "message": "You've joined the meeting session!"}), 200
-  else:
-    return jsonify({"status": "error", "message": "Session ID not provided/ incorrect. Try again"}), 400
+  try:
+    session_id = request.json.get("session_id")
+
+    if session_id:
+      session_data = retrieve_session_data(session_id)
+
+      if session_data:
+          return jsonify({"message": "You've joined the meeting session!"}), 200
+    else:
+      return jsonify({"message": "Session ID not provided/ incorrect. Try again"}), 400
+  except Exception as e:
+    return jsonify({"message": str(e)}), 500
 
 
 @app.route("/submit-recipient-email", methods=["POST"])
 def submit_recipient_email():
-  email = request.json.get("email")
-  session_id = request.json.get("session_id")
-  meeting_id = retrieve_session_data(session_id)["meeting_id"]
+  try:
+    email = request.json.get("email")
+    session_id = request.json.get("session_id")
 
-  insert_email(meeting_id, email)
-  return jsonify({"status": "OK", "message": "Recipient email submitted successfully"}), 200
+    session_data = retrieve_session_data(session_id)
+    meeting_id = session_data["meeting_id"]
+
+    insert_email(meeting_id, email)
+    return jsonify({"message": "Recipient email submitted successfully"}), 200
+  except Exception as e:
+    return jsonify({"message": str(e)}), 500
 
 
-@app.route("/check-recording-status", methods=["POST"])
-def check_recording_status():
-  session_id = request.json.get("session_id")
-  meeting_id = retrieve_session_data(session_id)["meeting_id"]
+@app.route("/recording-status", methods=["POST"])
+def recording_status():
+  try:
+    session_id = request.json.get("session_id")
+    session_data = retrieve_session_data(session_id)
+    meeting_id = session_data["meeting_id"]
 
-  if fetch_recording_status(meeting_id):
-    return jsonify({"status": "error", "message": "Recording already in progress."}), 400
-  else:
-    insert_recording_status(meeting_id)
-    return jsonify({"status": "OK", "message": "Recording started successfuly."}), 200
+    # check if recording already in progress
+    if fetch_recording_status(meeting_id):
+      return jsonify({"message": "Recording already in progress."}), 400
+    # if not then insert recording status as True to notify start recording
+    else:
+      insert_recording_status(meeting_id)
+      return jsonify({"message": "Recording started successfuly."}), 200
+  except Exception as e:
+    return jsonify({"message": str(e)}), 500
   
 
 @app.route("/process-recording", methods=["POST"])
 def process_recording():
-  if "recording" not in request.files:
-    return jsonify({"error": "No recording file provided"}), 400
-  
-  session_id = request.form.get("session_id")
-  meeting_recording = request.files["recording"]
+  try:
+    if "recording" not in request.files:
+      return jsonify({"error": "No recording file provided"}), 400
+    
+    session_id = request.form.get("session_id")
+    meeting_recording = request.files["recording"]
 
-  session_data = retrieve_session_data(session_id)
-  meeting_id = session_data["meeting_id"]
-  local_recording_path = session_data["local_recording_path"]
-  
-  meeting_recording.save(local_recording_path)
+    session_data = retrieve_session_data(session_id)
+    meeting_id = session_data["meeting_id"]
+    local_recording_path = session_data["local_recording_path"] 
 
-  # upload meeting recording to s3 and store path in relational database
-  recording_path = insert_recording_path(meeting_id)
-  upload_file_to_s3(local_recording_path, recording_path)
+    save_recording(meeting_recording, meeting_id, local_recording_path)
+    process_recording()
 
-  audio_processing_obj.online_audio_pipeline() 
-  # image_processing_obj.online_image_pipeline() 
-
-  return jsonify({"success": "Recording processed successfully"}), 200
+    return jsonify({"message": "Recording processed successfully"}), 200
+  except Exception as e:
+    return jsonify({"message": str(e)}), 500
 
   
 @app.route("/answer-query", methods=["POST"])
 def answer_query():
-  user_query = request.json.get("userInput")
+  try:
+    user_query = request.json.get("userInput")
 
-  response = user_interaction_obj.query_response_pipeline(prev_meeting_tool, user_query)
+    # get response to user query
+    response = user_interaction_obj.query_response_pipeline(prev_meeting_tool, user_query)
 
-  if response:
-    return jsonify({"status": "OK", "data": response}), 200
-  else:
-    return jsonify({"status": "error", "data": "No response found for query. Please try again"}), 400
+    if response:
+      return jsonify({"message": response}), 200
+    else:
+      return jsonify({"message": "No response found for query. Please try again"}), 400
+  except Exception as e:
+    return jsonify({"message": str(e)}), 500
 
 
 @app.route("/end-session", methods=["POST"])
 def end_session():
-  session_id = request.json.get("session_id")
-  session_data = retrieve_session_data(session_id)
-  meeting_id = session_data["meeting_id"]
-  local_transcript_path = session_data["local_transcript_path"]
-  
-  # generate final transcript with speaker diarization
-  audio_processing_obj = AudioProcessing(session_data)
-  audio_processing_obj.offline_audio_pipeline()
+  try:
+    session_id = request.json.get("session_id")
 
-  # generate textual component
-  textual_component_obj = TextualComponent()
-  textual_component = textual_component_obj.textual_component_pipeline(local_transcript_path)
-  # extract summary from textual component
-  summary = textual_component_obj.extract_summary_from_textual_component(textual_component)
+    session_data = retrieve_session_data(session_id)
 
-  # image-context and get image links
-  if summary:
-    image_url_desc_pairs = VisualComponent(meeting_id).get_contextual_images_from_summary(summary)
-  else:
-    image_url_desc_pairs = {}
-
-  # merge into final output doc
-  create_final_doc(session_data, textual_component, image_url_desc_pairs)
-
-  # email meeting notes to recipient
-  send_email(session_data)
-
-  # delete files from local file system
-  delete_files(meeting_id)
-
-  # terminate session
-  delete_session(session_id)
-
-  return jsonify({"status": "OK", "message": "Session ended successfully"}), 200
+    # processing on meeting end
+    on_end_processing(session_data)
+    return jsonify({"status": "OK", "message": "Recipient will receive meeting notes shortly. Thank you for using MeetTrack"}), 200
+  except Exception as e:
+    return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == "__main__":

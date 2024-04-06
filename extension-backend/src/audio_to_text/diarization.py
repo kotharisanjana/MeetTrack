@@ -1,11 +1,12 @@
 from common.utils import get_unixtime
 from __init__ import diarization_pipeline
 from database.vector_db import store_speaker_embedding
+
 import torch
 import numpy as np
 from scipy.io import wavfile
 
-class SpeakerDiarization:
+class Diarization:
     def __init__(self, meeting_id, local_audio_path, local_diarization_path):
         self.meeting_id = meeting_id
         self.local_audio_path = local_audio_path
@@ -15,7 +16,7 @@ class SpeakerDiarization:
         self.samplerate, self.data = wavfile.read(self.local_audio_path)
 
     def transform_audio(self):
-    # audio needs to be converted from stereo to mono
+        # audio needs to be converted from stereo to mono
         if len(self.data.shape) == 2:
             self.data = np.mean(self.data, axis=1)
         # Convert the data to a torch tensor and add a channel dimension
@@ -31,6 +32,7 @@ class SpeakerDiarization:
         store_speaker_embedding(self.embeddings)
 
     def create_diarization(self):
+        # store diarization output in local file
         with open(self.local_diarization_path, "a") as file:
            file.write(str(self.speakers) + "\n")
            file.write("*" + "\n")
@@ -42,14 +44,15 @@ class Speaker:
 
 
 class SpeakerIdentification:
+    # speaker segment object class
     def __init__(self, start_time, end_time, speaker):
         self.start_time = start_time
         self.end_time = end_time
         self.speaker = speaker
         
 
-class SpeakerIDsForTranscription:
-    def extract_time_info(self, time_string):
+class SpeakerSegments:
+    def extract_time(self, time_string):
         time_components = time_string.split(":")
         hour = time_components[0]
         min = time_components[1]
@@ -61,10 +64,12 @@ class SpeakerIDsForTranscription:
         self.speaker_segments = []
 
         with open(local_diarization_path, "r") as file:
+            # skip segments that are already processed
             for _ in range(diarization_fp_start):
                 file.readline()
 
             for line in file:
+                # return on end of segment
                 if len(line) < 3:
                     diarization_fp_start += 1
                     return diarization_fp_start
@@ -72,9 +77,9 @@ class SpeakerIDsForTranscription:
                 segment_components = line.split()
 
                 start = segment_components[1]
-                start_hour, start_min, start_sec, start_millisec  = self.extract_time_info(start)
+                start_hour, start_min, start_sec, start_millisec  = self.extract_time(start)
                 end = segment_components[3][:-1]
-                end_hour, end_min, end_sec, end_millisec  = self.extract_time_info(end)
+                end_hour, end_min, end_sec, end_millisec  = self.extract_time(end)
 
                 # convert start and end time to datetime
                 start_time = get_unixtime(start_hour, start_min, start_sec, start_millisec)
@@ -82,6 +87,7 @@ class SpeakerIDsForTranscription:
 
                 speaker = Speaker(segment_components[5].split("_")[1])
                 speaker_identification_obj = SpeakerIdentification(start_time, end_time, speaker)
+                # append to list of speaker segments
                 self.speaker_segments.append(speaker_identification_obj)
 
                 diarization_fp_start += 1
@@ -91,6 +97,7 @@ class SpeakerIDsForTranscription:
         i = 0
         speaker_duration = []
 
+        # merge diarization output within every segment to get one object per speaker dialogue 
         while i<l:
             start_time = self.speaker_segments[i].start_time
             end_time = self.speaker_segments[i].end_time

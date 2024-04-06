@@ -2,6 +2,7 @@ from common.aws_utilities import download_file_from_s3
 from database.relational_db import fetch_prev_transcript_path, fetch_curr_transcript_path
 import common.globals as global_vars
 from __init__ import llm
+
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, get_response_synthesizer
 from llama_index.core.tools import QueryPlanTool, QueryEngineTool
 from llama_index.agent.openai import OpenAIAgent
@@ -13,14 +14,18 @@ class PrevMeetingQueryEngine:
         self.meeting_id = meeting_id
 
     def get_transcript_path(self):
+        # if recurring meeting then fetch S3 paths of all previous transcripts
         self.transcript_path_list = fetch_prev_transcript_path(self.meeting_name, self.meeting_id)
 
     def handle_files_from_s3(self):
         local_transcript_paths = []
+
+        # download all previous transcripts from S3
         for transcript_path in self.transcript_path_list:
             local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, transcript_path.split("/")[-1])
             download_file_from_s3(transcript_path, local_filepath)
             local_transcript_paths.append(local_filepath)
+
         return local_transcript_paths
 
     def create_tool(self):
@@ -28,8 +33,10 @@ class PrevMeetingQueryEngine:
             local_transcript_paths = self.handle_files_from_s3()
 
             if len(local_transcript_paths) != 0:
+                # create query engine tool for previous meetings from the transcripts
                 files = SimpleDirectoryReader(input_files=local_transcript_paths).load_data()
                 prev_meeting_index = VectorStoreIndex.from_documents(files)
+
                 prev_meeting_engine = prev_meeting_index.as_query_engine(similarity_top_k=3, llm=llm)
 
                 self.prev_meeting_query_tool = QueryEngineTool.from_defaults(
@@ -38,6 +45,7 @@ class PrevMeetingQueryEngine:
                     description=(f"Provides transcripts from previous meetings"),
                     )
         else:
+            # if previous transcripts are not available, set tool to None
             self.prev_meeting_query_tool = None
 
     def get_tool(self):
@@ -57,13 +65,12 @@ class CurrMeetingQueryEngine:
     def get_transcript_path(self):
         self.transcript_path = fetch_curr_transcript_path(self.meeting_id)
 
-    def handle_files_from_s3(self):
-        self.local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, self.transcript_path.split("/")[-1])
-
     def create_tool(self):
-        self.handle_files_from_s3()
-        files = SimpleDirectoryReader(input_files=[self.local_filepath]).load_data()
+        local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, self.transcript_path.split("/")[-1])
+        files = SimpleDirectoryReader(input_files=[local_filepath]).load_data()
         curr_meeting_index = VectorStoreIndex.from_documents(files)
+
+        # create query engine tool for current meeting from the transcript
         curr_meeting_engine = curr_meeting_index.as_query_engine(similarity_top_k=3, llm=llm)
 
         self.curr_meeting_tool = QueryEngineTool.from_defaults(
@@ -82,10 +89,12 @@ class UserInteraction(CurrMeetingQueryEngine):
         super().__init__(meeting_id, meeting_name)
 
     def create_plan_tool(self, prev_meeting_tool):
+        # create query engine tool for current meeting transcript
         super().create_query_engine()
 
         response_synthesizer = get_response_synthesizer()
         
+        # define list of tools based on previous and current meeting tools
         if prev_meeting_tool and self.curr_meeting_tool:
             tools = [prev_meeting_tool, self.curr_meeting_tool]
         elif prev_meeting_tool:
@@ -96,14 +105,17 @@ class UserInteraction(CurrMeetingQueryEngine):
             tools = []
 
         if len(tools) != 0:
+            # create query plan tool if tools exist
             self.query_plan_tool = QueryPlanTool.from_defaults(
                 query_engine_tools=tools,
                 response_synthesizer=response_synthesizer,
                 )
         else:
+            # if no tools exist, set query plan tool to None
             self.query_plan_tool = None
         
     def create_agent(self):
+        # create OpenAI agent with query plan tool to answer user queries
         self.agent = OpenAIAgent.from_tools(
             [self.query_plan_tool],
             max_function_calls=2,
@@ -122,8 +134,3 @@ class UserInteraction(CurrMeetingQueryEngine):
             return self.get_response(user_query)
         else:
             return None
-
-
-def setup_prev_meeting_query_engine(meeting_name, meeting_id):
-    prev_meeting_query_engine = PrevMeetingQueryEngine(meeting_name, meeting_id)
-    return prev_meeting_query_engine.create_query_engine()
