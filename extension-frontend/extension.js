@@ -105,6 +105,11 @@ document.addEventListener("DOMContentLoaded", function () {
     var email = document.getElementById('emailID').value;
     session_id = localStorage.getItem("session_id")
 
+    if (session_id === null) {
+      alert("Please enter the session ID first.");
+      return;
+    }
+
     await fetch("http://localhost:5000/submit-recipient-email", {
       method: "POST",
       headers: {
@@ -163,29 +168,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
   endButton.addEventListener("click", async function () {
     session_id = localStorage.getItem("session_id");
+    recording_status = localStorage.getItem("recording_status");
 
-    await fetch("http://localhost:5000/end-session", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ session_id: session_id })
-    })
-    .then(response => {
-      if (response.status === 200) {
-        return response.json();
-      } else {
-        return response.json().then(data => {
-          throw new Error(data.message);
-        });
-      }
-    })
-    .then(data => {
-      alert(data.message);
-      localStorage.clear();
-    })
-    .catch(error => console.error("Error:", error));
+    if (recording_status === "true" && fullShutdown === false) {
+      alert("Stop recording before ending the session");
+      return;
+    } else if (recording_status === "false") { 
+      return;
+    } else if (recording_status === "true" && fullShutdown === true) { // only the participant recording the meeting can end the session to ensure full meeting is recorded
+      await fetch("http://localhost:5000/end-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ session_id: session_id })
+      })
+      .then(response => {
+        if (response.status === 200) {
+          return response.json();
+        } else {
+          return response.json().then(data => {
+            throw new Error(data.message);
+          });
+        }
+      })
+      .then(data => {
+        alert(data.message);
+        localStorage.clear();
+      })
+      .catch(error => console.error("Error:", error));
+    }
   });
+
 });
 
 

@@ -22,7 +22,10 @@ def on_end_processing(session_data):
   logger.info("Textual component creation completed.")
 
   # extract summary from textual component
-  summary = textual_component_obj.extract_summary_from_textual_component(textual_component)
+  if textual_component:
+    summary = textual_component_obj.extract_summary_from_textual_component(textual_component)
+  else:
+    summary = None
 
   # image-context and get image links
   if summary:

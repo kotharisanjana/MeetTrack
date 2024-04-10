@@ -1,7 +1,8 @@
 from common.aws_utilities import download_file_from_s3
-from database.relational_db import fetch_prev_transcript_path, fetch_curr_transcript_path
+from database.relational_db import fetch_prev_transcript_path
+from src.processing.meeting_start import user_interaction_gr_obj
 import common.globals as global_vars
-from __init__ import llm
+from __init__ import llm, logger
 
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, get_response_synthesizer
 from llama_index.core.tools import QueryPlanTool, QueryEngineTool
@@ -22,7 +23,7 @@ class PrevMeetingQueryEngine:
 
         # download all previous transcripts from S3
         for transcript_path in self.transcript_path_list:
-            local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, transcript_path.split("/")[-1])
+            local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, f"{self.meeting_id}/prev", transcript_path.split("/")[-1])
             download_file_from_s3(transcript_path, local_filepath)
             local_transcript_paths.append(local_filepath)
 
@@ -58,16 +59,12 @@ class PrevMeetingQueryEngine:
 
 
 class CurrMeetingQueryEngine:
-    def __init__(self, meeting_id, meeting_name):
-        self.meeting_id = meeting_id
+    def __init__(self, meeting_name, local_transcript_path):
         self.meeting_name = meeting_name
-
-    def get_transcript_path(self):
-        self.transcript_path = fetch_curr_transcript_path(self.meeting_id)
+        self.local_transcript_path = local_transcript_path
 
     def create_tool(self):
-        local_filepath = os.path.join(global_vars.DOWNLOAD_DIR, self.transcript_path.split("/")[-1])
-        files = SimpleDirectoryReader(input_files=[local_filepath]).load_data()
+        files = SimpleDirectoryReader(input_files=[self.local_transcript_path]).load_data()
         curr_meeting_index = VectorStoreIndex.from_documents(files)
 
         # create query engine tool for current meeting from the transcript
@@ -80,13 +77,12 @@ class CurrMeetingQueryEngine:
             )
 
     def create_query_engine(self):
-        self.get_transcript_path()
         self.create_tool()
 
 
 class UserInteraction(CurrMeetingQueryEngine):   
-    def __init__(self, meeting_id, meeting_name):
-        super().__init__(meeting_id, meeting_name)
+    def __init__(self, meeting_name, local_transcript_path):
+        super().__init__(meeting_name, local_transcript_path)
 
     def create_plan_tool(self, prev_meeting_tool):
         # create query engine tool for current meeting transcript
@@ -118,7 +114,7 @@ class UserInteraction(CurrMeetingQueryEngine):
         # create OpenAI agent with query plan tool to answer user queries
         self.agent = OpenAIAgent.from_tools(
             [self.query_plan_tool],
-            max_function_calls=2,
+            max_function_calls=1,
             llm=llm,
             verbose=True,
         )
@@ -131,6 +127,20 @@ class UserInteraction(CurrMeetingQueryEngine):
         self.create_plan_tool(prev_meeting_tool)
         if self.query_plan_tool:
             self.create_agent()
-            return self.get_response(user_query)
+
+            max_tries = 2
+
+            while max_tries > 0:
+                agent_resp = self.get_response(user_query)
+                outcome = user_interaction_gr_obj.validate(agent_resp)
+
+                if outcome:
+                    # if response passes guardrails validation, break out of the loop and return response
+                    if outcome.reask is None:
+                        logger.info("User query response completed and validated.")
+                        return agent_resp
+                
+                max_tries -= 1
         else:
+            logger.error("Error in getting a response for user query.")
             return None

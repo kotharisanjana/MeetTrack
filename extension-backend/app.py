@@ -1,6 +1,6 @@
 import common.globals as global_vars
 from database.cache import retrieve_session_data, create_session, get_session_id
-from database.relational_db import insert_email, fetch_recording_status, insert_recording_status
+from database.relational_db import insert_email, fetch_recording_status, insert_recording_status, fetch_email
 from src.processing.meeting_start import on_start_processing, user_interaction_obj, prev_meeting_tool
 from src.processing.meeting_end import on_end_processing
 from src.processing.recording_processing import save_recording, process_recording
@@ -30,7 +30,7 @@ def submit_details():
     meeting_type = request.json.get("meetingType")
 
     if not meeting_name or not meeting_type:
-      return jsonify({"message": "Meeting name and type are required."}), 400
+      return jsonify({"message": "Meeting name and type required."}), 400
 
     session_id = get_session_id(meeting_name)
 
@@ -40,7 +40,9 @@ def submit_details():
       
       # perform initial steps for providing assistance during meeting
       on_start_processing(session_id)
-    return jsonify({"session_id": session_id}), 200
+      return jsonify({"session_id": session_id}), 200
+    else:
+      return jsonify({"message": "Session already in progress. Enter session ID to access the session."}), 400
   except Exception as e:
         return jsonify({"message": str(e)}), 500
   
@@ -52,11 +54,12 @@ def access_session():
 
     if session_id:
       session_data = retrieve_session_data(session_id)
-
       if session_data:
           return jsonify({"message": "You've joined the meeting session!"}), 200
+      else:
+          return jsonify({"message": "Session ID not found. Please enter a valid session ID"}), 400
     else:
-      return jsonify({"message": "Session ID not provided/ incorrect. Try again"}), 400
+      return jsonify({"message": "Session ID not provided. Try again"}), 400
   except Exception as e:
     return jsonify({"message": str(e)}), 500
 
@@ -120,13 +123,16 @@ def answer_query():
   try:
     user_query = request.json.get("userInput")
 
+    if user_query is None:
+      return jsonify({"message": "User query not provided"}), 400
+
     # get response to user query
     response = user_interaction_obj.query_response_pipeline(prev_meeting_tool, user_query)
 
     if response:
       return jsonify({"message": response}), 200
     else:
-      return jsonify({"message": "No response found for query. Please try again"}), 400
+      return jsonify({"message": "Sorry, I am unable to answer your query at the moment. Please try again later."}), 400
   except Exception as e:
     return jsonify({"message": str(e)}), 500
 
@@ -137,6 +143,12 @@ def end_session():
     session_id = request.json.get("session_id")
 
     session_data = retrieve_session_data(session_id)
+    meeting_id = session_data["meeting_id"]
+
+    recipient_email = fetch_email(meeting_id)
+
+    if recipient_email is None:
+      return jsonify({"message": "Recipient email not found. Please submit recipient email before ending session"}), 400
 
     # processing on meeting end
     on_end_processing(session_data)

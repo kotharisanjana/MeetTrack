@@ -1,4 +1,5 @@
-from __init__ import llm_chat
+from __init__ import llm_chat, logger
+from src.processing.meeting_start import textual_gr_obj
 
 from langchain.chains.summarize import load_summarize_chain
 from langchain.docstore.document import Document
@@ -65,22 +66,46 @@ class TextualComponent:
             template=refine_template,
         )
 
-        chain = load_summarize_chain(
-            llm_chat,
-            chain_type="refine",
-            return_intermediate_steps=True,
-            question_prompt=PROMPT,
-            refine_prompt=refine_prompt,
-        )
-        resp = chain({"input_documents": self.docs}, return_only_outputs=True)
-        textual_component = resp["output_text"]
+        try:
+            chain = load_summarize_chain(
+                llm_chat,
+                chain_type="refine",
+                return_intermediate_steps=True,
+                question_prompt=PROMPT,
+                refine_prompt=refine_prompt,
+            )
+            resp = chain({"input_documents": self.docs}, return_only_outputs=True)
+            textual_component = resp["output_text"]
+
+            logger.info("Textual component generated.")
+        except Exception as e:
+            logger.error(f"Error in generating textual component: {e}")
+            textual_component = None
 
         return textual_component
 
     def textual_component_pipeline(self, local_transcript_file):
         self.get_meeting_transcript(local_transcript_file)
         self.process_transcript()
-        return self.generate_textual_component()
+
+        textual_gr_obj.setup_guard()
+
+        max_tries = 3
+
+        # call guardrails to ensure the correctness of the textual component
+        while max_tries > 0:
+            text = self.generate_textual_component()
+            outcome = textual_gr_obj.validate(text)
+
+            if outcome:
+                if outcome.reask is None:
+                    logger.info("Textual component creation completed and validated.")
+                    return text
+            
+            max_tries -= 1
+
+        logger.error("Textual component creation failed.")
+        return None
     
     def extract_summary_from_textual_component(self, textual_component):
         # extract meeting summary from textual component
