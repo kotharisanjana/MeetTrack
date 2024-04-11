@@ -1,6 +1,7 @@
 import numpy as np
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_audio
 from moviepy.editor import VideoFileClip
+from PIL import Image
 
 class VideoProcessing:
     def __init__(self, local_recording_path, meeting_id):
@@ -23,7 +24,10 @@ class VideoProcessing:
         screenshots = []
 
         for i in np.arange(0, duration, interval):
-            frame = clip.get_frame(i)
-            screenshots.append(frame)
+            frame = clip.get_frame(i)  
+            img = Image.fromarray(frame)  
+            screenshots.append(img)  
 
         return screenshots
+
+      
