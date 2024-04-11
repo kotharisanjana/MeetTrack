@@ -41,7 +41,7 @@ class AudioProcessing:
 
         # merge transcription and diarization and get actual speakers for every recording segment
         while global_vars.RECORDING_GLOBAL_INDEX > 0:
-            transcript_segments, transcript_fp_start = TranscriptSegments().transcript_segments_pipeline(transcript_fp_start)
+            transcript_segments, transcript_fp_start = TranscriptSegments().transcript_segments_pipeline(transcript_fp_start, self.local_transcript_path)
             speaker_segments, diarization_fp_start = SpeakerSegments().speaker_segments_pipeline(self.local_diarization_path, diarization_fp_start)
 
             audio_to_text_output = audio_to_text_output + combine_asr_diarization(speaker_segments, transcript_segments) + "\n"

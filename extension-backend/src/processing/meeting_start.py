@@ -1,6 +1,4 @@
-from src.user_interaction.query_engine import UserInteraction, PrevMeetingQueryEngine
-from src.processing.audio_processing import AudioProcessing
-from src.processing.image_processing import ImageProcessing
+from src.user_interaction.query_engine import PrevMeetingQueryEngine
 import common.globals as global_vars
 from database.cache import get_redis_client, retrieve_session_data
 from database.relational_db import insert_meeting_info, fetch_meeting_id, insert_s3_paths, check_first_occurence
@@ -9,17 +7,11 @@ from __init__ import logger
 import json
 import os
 
-prev_meeting_tool = None
-audio_processing_obj = None
-image_processing_obj = None
-user_interaction_obj = None
-
 def on_start_processing(session_id):
   session_data = retrieve_session_data(session_id)
   meeting_id = insert_into_relational_db(session_data)
   update_session_data(session_id, meeting_id, session_data)
   create_local_directories(meeting_id)
-  init_global_objects(session_data)
   setup_prev_meeting_engine(session_data["meeting_type"], meeting_id, session_data["meeting_name"])
   
 
@@ -72,17 +64,3 @@ def setup_prev_meeting_engine(meeting_type, meeting_id, meeting_name):
       logger.info("Previous meeting query engine setup successful.")
     else:
       logger.info("First occurence of recurring meeting. No previous meeting data available.")
-
-
-def init_global_objects(session_data):
-  # initilize global objects
-  global audio_processing_obj
-  audio_processing_obj = AudioProcessing(session_data)
-
-  global image_processing_obj
-  image_processing_obj = ImageProcessing(session_data)
-
-  global user_interaction_obj
-  user_interaction_obj = UserInteraction(session_data["meeting_name"], session_data["local_transcript_path"])  
-
-  logger.info("Global objects initialized successfully.")

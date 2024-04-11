@@ -174,7 +174,7 @@ def fetch_recording_path(meeting_id):
     try:
         sql = "SELECT recording_path FROM recordings WHERE meeting_id=%s;"
         conn_cursor.execute(sql, (meeting_id, ))
-        recording_path = conn_cursor.fetchone()[0]
+        recording_path = [row[0] for row in conn_cursor.fetchall()][-1]
 
         logger.info("Recording path fetched successfully")
         return recording_path

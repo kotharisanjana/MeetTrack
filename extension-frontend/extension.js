@@ -188,6 +188,7 @@ document.addEventListener("DOMContentLoaded", function () {
           return response.json();
         } else {
           return response.json().then(data => {
+            alert(data.message);
             throw new Error(data.message);
           });
         }
@@ -204,6 +205,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 chrome.runtime.onMessage.addListener(async (message) => {
+  console.log("Message received:", message.type);
   switch (message.type) {
     case "start-recording":
       startRecording(message.data);
@@ -222,14 +224,14 @@ async function startRecording(streamId) {
     session_id = localStorage.getItem("session_id");
     recording_status = localStorage.getItem("recording_status");
 
-    // check if recording is already enabled for the current meeting
     if (recording_status === "false") {
-      recordingStatusResponse = await checkRecordingStaus(session_id);
-    }
+      recordingStatusResponse = await checkRecordingStatus(session_id);
+      responseData = await recordingStatusResponse.json();
+    } 
 
     if (recording_status === "true" || recordingStatusResponse.status === 200) {
       if (recording_status === "false"){
-        alert(recordingStatusResponse.message);
+        alert(responseData.message);
       }
 
       localStorage.setItem("recording_status", "true");
@@ -274,7 +276,6 @@ async function startRecording(streamId) {
         const blob = new Blob(data, { type: "video/webm" });
         const recordingUrl = URL.createObjectURL(blob);
 
-        // processRecording(blob, session_id);
         addToQueue(blob, session_id);
 
         URL.revokeObjectURL(recordingUrl);
@@ -293,11 +294,11 @@ async function startRecording(streamId) {
         // Set a timer to stop the recording after 30 seconds 
         stopTimer = setTimeout(async () => {
           await stopRecording();
-        }, 30000);
+        }, 15000);
       }
     } else {
-      alert(recordingStatusResponse.message);
-      throw new Error(recordingStatusResponse.message);
+      alert(responseData.message);
+      throw new Error(responseData.message);
     } 
   } catch (error) {
     console.error("Error:", error);
@@ -305,15 +306,20 @@ async function startRecording(streamId) {
 }
 
 
-async function checkRecordingStaus(session_id){
-  const recordingStatusResponse = await fetch("http://localhost:5000/recording-status", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ session_id: session_id })
-  });
-  return recordingStatusResponse.json();
+async function checkRecordingStatus(session_id){
+  try{
+    const recordingStatusResponse = await fetch("http://localhost:5000/recording-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ session_id: session_id })
+    });
+    return recordingStatusResponse;
+   } catch (error) {
+   console.error("Error fetching recording status:", error);
+   return null;
+ }
 }
 
 
@@ -360,6 +366,8 @@ async function processRecording(blob, session_id){
         method: "POST",
         body: formData
     })
+
+    console.log(processRecordingResponse.status);
 
     if (processRecordingResponse.status !== 200) {
       alert("Error in recording.");
