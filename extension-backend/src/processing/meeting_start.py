@@ -1,8 +1,6 @@
 from src.user_interaction.query_engine import UserInteraction, PrevMeetingQueryEngine
 from src.processing.audio_processing import AudioProcessing
 from src.processing.image_processing import ImageProcessing
-from guardrails.textual_gr import TextualGuard
-from guardrails.user_interaction_gr import UserInteractionGuard
 import common.globals as global_vars
 from database.cache import get_redis_client, retrieve_session_data
 from database.relational_db import insert_meeting_info, fetch_meeting_id, insert_s3_paths, check_first_occurence
@@ -15,8 +13,6 @@ prev_meeting_tool = None
 audio_processing_obj = None
 image_processing_obj = None
 user_interaction_obj = None
-textual_gr_obj = None
-user_interaction_gr_obj = None
 
 def on_start_processing(session_id):
   session_data = retrieve_session_data(session_id)
@@ -87,12 +83,6 @@ def init_global_objects(session_data):
   image_processing_obj = ImageProcessing(session_data)
 
   global user_interaction_obj
-  user_interaction_obj = UserInteraction(session_data["meeting_name"], session_data["local_transcript_path"])
-
-  global textual_gr_obj
-  textual_gr_obj = TextualGuard(session_data["meeting_id"], session_data["local_transcript_path"])
-
-  global user_interaction_gr_obj
-  user_interaction_gr_obj = UserInteractionGuard()
+  user_interaction_obj = UserInteraction(session_data["meeting_name"], session_data["local_transcript_path"])  
 
   logger.info("Global objects initialized successfully.")

@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ name: meetingName, meetingType: meetingType})
+      body: JSON.stringify({ meetingName: meetingName, meetingType: meetingType})
     })
     .then(response => {
       if (response.status === 200) {
@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     })
     .then(data => {
-      alert("Session ID: \n" + data.session_id);
+      alert("Session ID: " + data.session_id);
     })
     .catch(error => console.error("Error:", error));
 

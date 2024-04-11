@@ -9,7 +9,6 @@ from __init__ import logger
 
 def on_end_processing(session_data):
   meeting_id = session_data["meeting_id"]
-  local_transcript_path = session_data["local_transcript_path"]
   session_id = session_data["session_id"]
   
   # generate final transcript with speaker diarization
@@ -18,7 +17,7 @@ def on_end_processing(session_data):
 
   # generate textual component
   textual_component_obj = TextualComponent()
-  textual_component = textual_component_obj.textual_component_pipeline(local_transcript_path)
+  textual_component = textual_component_obj.textual_component_pipeline(session_data)
   logger.info("Textual component creation completed.")
 
   # extract summary from textual component

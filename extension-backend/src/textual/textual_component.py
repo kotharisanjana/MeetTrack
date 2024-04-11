@@ -1,5 +1,5 @@
 from __init__ import llm_chat, logger
-from src.processing.meeting_start import textual_gr_obj
+from src.guardrails.textual_gr import TextualGR
 
 from langchain.chains.summarize import load_summarize_chain
 from langchain.docstore.document import Document
@@ -84,10 +84,11 @@ class TextualComponent:
 
         return textual_component
 
-    def textual_component_pipeline(self, local_transcript_file):
-        self.get_meeting_transcript(local_transcript_file)
+    def textual_component_pipeline(self, session_data):
+        self.get_meeting_transcript(session_data["local_transcript_path"])
         self.process_transcript()
 
+        textual_gr_obj = TextualGR(session_data["meeting_id"], session_data["local_transcript_path"])
         textual_gr_obj.setup_guard()
 
         max_tries = 3

@@ -1,5 +1,4 @@
 from __init__ import logger
-import common.globals as global_vars
 
 import os
 from guardrails import Guard
@@ -9,7 +8,7 @@ from guardrails.hub import (
     LLMCritic
 )
 
-class TextualGuard():
+class TextualGR():
     def __init__(self, meeting_id, local_transcript_path):
         self.meeting_id = meeting_id
         self.local_transcript_path = local_transcript_path

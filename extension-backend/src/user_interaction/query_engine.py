@@ -1,6 +1,6 @@
 from common.aws_utilities import download_file_from_s3
 from database.relational_db import fetch_prev_transcript_path
-from src.processing.meeting_start import user_interaction_gr_obj
+from src.guardrails.user_interaction_gr import UserInteractionGR
 import common.globals as global_vars
 from __init__ import llm, logger
 
@@ -8,6 +8,8 @@ from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, get_respon
 from llama_index.core.tools import QueryPlanTool, QueryEngineTool
 from llama_index.agent.openai import OpenAIAgent
 import os
+
+user_interaction_gr_obj = UserInteractionGR()
 
 class PrevMeetingQueryEngine:
     def __init__(self, meeting_name, meeting_id):

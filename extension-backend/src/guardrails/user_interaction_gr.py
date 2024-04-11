@@ -7,7 +7,7 @@ from guardrails.hub import (
     ToxicLanguage,
 )
 
-class UserInteractionGuard():
+class UserInteractionGR():
     def __init__(self):
         self.setup_guard()
         
