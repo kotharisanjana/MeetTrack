@@ -122,6 +122,7 @@ class UserInteraction(CurrMeetingQueryEngine):
         )
 
     def get_response(self, user_query):
+        user_query = "Answer user question based on the meeting transcript. Give a brief and accurate answer. " + user_query
         response = self.agent.query(user_query)
         return str(response)        
 
