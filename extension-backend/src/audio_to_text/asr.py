@@ -44,10 +44,10 @@ class TranscriptSegments():
     millisec = int(time[1][:3])
     return hour, min, sec, millisec
 
-  def transcript_segments_pipeline(self, transcript_fp_start):
+  def transcript_segments_pipeline(self, transcript_fp_start, local_transcript_path):
     transcript_segments = []
 
-    with open(self.local_transcript_path, "r") as file:
+    with open(local_transcript_path, "r") as file:
         # read segment individually to process
         for _ in range(transcript_fp_start):
           file.readline()

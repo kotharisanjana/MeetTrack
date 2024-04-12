@@ -24,6 +24,7 @@ load_dotenv()
 
 # set up OpenAI API key
 openai.api_key = os.getenv("OPENAI_API")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API")
 
 # set up Redis client
 redis_client = Redis(host="localhost", port=6379, db=0)

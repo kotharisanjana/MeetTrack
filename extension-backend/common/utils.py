@@ -3,6 +3,7 @@ from __init__ import logger
 
 from datetime import datetime, date
 import os
+import shutil
 
 def get_unixtime(hour=0, minute=0, second=0, millisecond=0):
     """
@@ -35,11 +36,5 @@ def delete_files(meeting_id):
 
     :param meeting_id: ID of the meeting
     """
-    for filename in os.listdir(global_vars.DOWNLOAD_DIR):
-        if filename.startswith(str(meeting_id)):
-            file_path = os.path.join(global_vars.DOWNLOAD_DIR, filename)
-            try:
-                os.remove(file_path)
-                logger.info(f"Deleted file {file_path}")
-            except OSError as e:
-                logger.error(f"Error deleting file {file_path}: {e}")
+    directory_path = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}")
+    shutil.rmtree(directory_path)
