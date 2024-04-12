@@ -31,17 +31,15 @@ document.addEventListener("DOMContentLoaded", function () {
       body: JSON.stringify({ meetingName: meetingName, meetingType: meetingType})
     })
     .then(response => {
-      if (response.status === 200) {
-        return response.json();
-      } else {
+      if (response.status === 200 || response.status === 400) {
         return response.json().then(data => {
           alert(data.message);
+        });
+      } else {
+        return response.json().then(data => {
           throw new Error(data.message);
         });
       }
-    })
-    .then(data => {
-      alert("Session ID: " + data.session_id);
     })
     .catch(error => console.error("Error:", error));
 
@@ -72,9 +70,10 @@ document.addEventListener("DOMContentLoaded", function () {
           endButton.classList.remove("disabled");
 
           return response.json();
+      } else if (response.status === 400) {
+        return response.json();
       } else {
         return response.json().then(data => {
-          alert(data.message);
           throw new Error(data.message);
         });
       }
@@ -122,7 +121,6 @@ document.addEventListener("DOMContentLoaded", function () {
         return response.json();
       } else  {
         return response.json().then(data => {
-          alert(data.message);
           throw new Error(data.message);
         });
       }
@@ -150,11 +148,10 @@ document.addEventListener("DOMContentLoaded", function () {
       })
     })
     .then(response => {
-      if (response.status === 200) {
+      if (response.status === 200 || response.status === 400) {
         return response.json();
       } else {
         return response.json().then(data => {
-          textDisplay.textContent = data.message;
           throw new Error(data.message);
         });
       }
@@ -184,11 +181,10 @@ document.addEventListener("DOMContentLoaded", function () {
         body: JSON.stringify({ session_id: session_id })
       })
       .then(response => {
-        if (response.status === 200) {
+        if (response.status === 200 || response.status === 400) {
           return response.json();
         } else {
           return response.json().then(data => {
-            alert(data.message);
             throw new Error(data.message);
           });
         }
@@ -362,17 +358,16 @@ async function processRecording(blob, session_id){
     formData.append("recording", blob);
     formData.append("session_id", session_id);
 
-    const processRecordingResponse = await fetch("http://localhost:5000/process-recording", {
+    const response = await fetch("http://localhost:5000/process-recording", {
         method: "POST",
         body: formData
     })
 
-    console.log(processRecordingResponse.status);
-
-    if (processRecordingResponse.status !== 200) {
-      alert("Error in recording.");
-      throw new Error(processRecordingResponse.message);
-    } 
+    if (response.status === 400) {
+      alert(response.message);
+    } else if (response.status === 500) {
+      throw new Error(response.message);
+    }
   } catch (error) {
     console.error("Error:", error);
   }

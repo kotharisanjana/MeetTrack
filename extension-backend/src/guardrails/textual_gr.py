@@ -9,8 +9,7 @@ from guardrails.hub import (
 )
 
 class TextualGR():
-    def __init__(self, meeting_id, local_transcript_path):
-        self.meeting_id = meeting_id
+    def __init__(self, local_transcript_path):
         self.local_transcript_path = local_transcript_path
         self.docs_dir = os.path.sep.join(self.local_transcript_path.split(os.path.sep)[:-1])
 

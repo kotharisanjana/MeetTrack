@@ -71,7 +71,7 @@ def submit_details():
       session_data = retrieve_session_data(session_id)
       init_global_objects(session_data)
 
-      return jsonify({"session_id": session_id}), 200
+      return jsonify({"message": session_id}), 200
     else:
       return jsonify({"message": "Session already in progress. Enter session ID to access the session."}), 400
   except Exception as e:
@@ -132,7 +132,7 @@ def recording_status():
 def process_recording():
   try:
     if "recording" not in request.files:
-      return jsonify({"error": "No recording file provided"}), 400
+      return jsonify({"error": "Recording unavailable."}), 400
     
     session_id = request.form.get("session_id")
     meeting_recording = request.files["recording"]
@@ -143,9 +143,9 @@ def process_recording():
 
     save_recording(meeting_recording, meeting_id, local_recording_path)
     audio_processing_obj.online_audio_pipeline() 
-    # image_processing_obj.online_image_pipeline()
+    image_processing_obj.online_image_pipeline()
 
-    return jsonify({"message": "Recording processed successfully"}), 200
+    return jsonify({"message": "Recording processed successfully."}), 200
   except Exception as e:
     return jsonify({"message": str(e)}), 500
 
@@ -185,6 +185,7 @@ def end_session():
     # processing on meeting end
     audio_processing_obj.offline_audio_pipeline()
     on_end_processing(session_data)
+
     return jsonify({"status": "OK", "message": "Recipient will receive meeting notes shortly. Thank you for using MeetTrack"}), 200
   except Exception as e:
     return jsonify({"status": "error", "message": str(e)}), 500

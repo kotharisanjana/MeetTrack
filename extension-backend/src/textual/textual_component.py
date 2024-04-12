@@ -28,40 +28,38 @@ class TextualComponent:
         self.docs = [Document(page_content=t) for t in transcript_chunks[:]]
 
     def generate_textual_component(self):
-        # chain of density prompting for textual component generation
-        target_len = 500
-        
+        # chain of density prompting for generating meeting notes        
         prompt_template = """
-            Act as a professional technical meeting minutes writer.
+            Act as a professional technical meeting minutes writer. 
+            Generate a meeting summary in 50-100 words that provides a concise overview of the meeting and enclose it in <summary></summary> tags.
             Tone: formal
             Format: Technical meeting summary
             Length:  200 ~ 300
+            After the summary, add the following sections and use bullet points if needed:
             Tasks:
-            - highlight action items and owners
-            - highlight the agreements
-            - Use bullet points if needed
+            - highlight the key discussions
+            - highlight action items with owner names
+            - highlight any other important details under appropriate headings
             {text}
-            CONCISE SUMMARY IN ENGLISH:
-            <summary>
-            </summary>
+            CONCISE MEETING NOTES IN ENGLISH:
             """
 
         PROMPT = PromptTemplate(template=prompt_template, input_variables=["text"])
 
         refine_template = (
-        "Your job is to produce a final summary\n"
-        "We have provided an existing summary up to a certain point: <summary>{existing_answer}</summary>\n"
-        "We have the opportunity to refine the existing summary "
-        "(only if needed) with some more context below.\n"
-        "------------\n"
-        "{text}\n"
-        "------------\n"
-        "Given the new context, refine the original summary in English within {target_len} words: following the format "
-        "Participants: <participants> "
-        "Discussed: <Discussed-items> "
-        "Follow-up actions: <a-list-of-follow-up-actions-with-owner-names> "
-        "If the context isn't useful, return the original summary encapsulated within <summary></summary> tags. "
-        "Highlight agreements and follow-up actions and owners."
+        """
+        We have provided existing meeting notes: {existing_answer}
+        We now have the opportunity to refine the existing meeting notes (only if needed) with some more context below.
+        ------------
+        {text}
+        ------------
+
+        Given the new context, perform the following tasks:
+        - Refine the summary that is enclosed in <summary></summary> tags and keep it in between the tags.
+        - Ensure all sections and bullet points after the summary are maintained as is in the existing meeting notes, while excluding the meeting transcript sections.
+
+        If the context isn't useful, return the original meeting notes as is.
+        """
     )
 
         refine_prompt = PromptTemplate(
@@ -87,11 +85,11 @@ class TextualComponent:
 
         return textual_component
 
-    def textual_component_pipeline(self, session_data):
-        self.get_meeting_transcript(session_data["local_transcript_path"])
+    def textual_component_pipeline(self, local_transcript_path):
+        self.get_meeting_transcript(local_transcript_path)
         self.process_transcript()
 
-        textual_gr_obj = TextualGR(session_data["meeting_id"], session_data["local_transcript_path"])
+        textual_gr_obj = TextualGR(local_transcript_path)
         textual_gr_obj.setup_guard()
 
         max_tries = 3
@@ -112,8 +110,7 @@ class TextualComponent:
         return None
     
     def extract_summary_from_textual_component(self, textual_component):
-       
-        #Extract meeting summary based on <summary></summary> tags.
+        # Extract meeting summary based on <summary></summary> tags.
         pattern = r'<summary>(.*?)</summary>'
         match = re.search(pattern, textual_component, re.DOTALL)
         
@@ -121,14 +118,3 @@ class TextualComponent:
             return match.group(1).strip()
         else:
             return None
-    
-    # def extract_summary_from_textual_component(self, textual_component):
-    #     # extract meeting summary from textual component
-    #     word1 = "Summary"
-    #     word2 = "Action items:"
-    #     pattern = re.escape(word1) + r'(.*?)' + re.escape(word2)
-    #     match = re.search(pattern, textual_component, re.DOTALL)
-    #     if match:
-    #         return match.group(1).strip()
-    #     else:
-    #         return None
