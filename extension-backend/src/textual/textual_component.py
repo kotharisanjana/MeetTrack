@@ -42,24 +42,27 @@ class TextualComponent:
             - Use bullet points if needed
             {text}
             CONCISE SUMMARY IN ENGLISH:
-        """
+            <summary>
+            </summary>
+            """
 
         PROMPT = PromptTemplate(template=prompt_template, input_variables=["text"])
 
         refine_template = (
-            "Your job is to produce a final summary\n"
-            "We have provided an existing summary up to a certain point: {existing_answer}\n"
-            "We have the opportunity to refine the existing summary"
-            "(only if needed) with some more context below.\n"
-            "------------\n"
-            "{text}\n"
-            "------------\n"
-            f"Given the new context, refine the original summary in English within {target_len} words: following the format"
-            "Participants: <participants>"
-            "Discussed: <Discussed-items>"
-            "Follow-up actions: <a-list-of-follow-up-actions-with-owner-names>"
-            "If the context isn't useful, return the original summary. Highlight agreements and follow-up actions and owners."
-        )
+        "Your job is to produce a final summary\n"
+        "We have provided an existing summary up to a certain point: <summary>{existing_answer}</summary>\n"
+        "We have the opportunity to refine the existing summary "
+        "(only if needed) with some more context below.\n"
+        "------------\n"
+        "{text}\n"
+        "------------\n"
+        "Given the new context, refine the original summary in English within {target_len} words: following the format "
+        "Participants: <participants> "
+        "Discussed: <Discussed-items> "
+        "Follow-up actions: <a-list-of-follow-up-actions-with-owner-names> "
+        "If the context isn't useful, return the original summary encapsulated within <summary></summary> tags. "
+        "Highlight agreements and follow-up actions and owners."
+    )
 
         refine_prompt = PromptTemplate(
             input_variables=["existing_answer", "text"],
@@ -109,12 +112,23 @@ class TextualComponent:
         return None
     
     def extract_summary_from_textual_component(self, textual_component):
-        # extract meeting summary from textual component
-        word1 = "Summary"
-        word2 = "Action items:"
-        pattern = re.escape(word1) + r'(.*?)' + re.escape(word2)
+       
+        #Extract meeting summary based on <summary></summary> tags.
+        pattern = r'<summary>(.*?)</summary>'
         match = re.search(pattern, textual_component, re.DOTALL)
+        
         if match:
             return match.group(1).strip()
         else:
             return None
+    
+    # def extract_summary_from_textual_component(self, textual_component):
+    #     # extract meeting summary from textual component
+    #     word1 = "Summary"
+    #     word2 = "Action items:"
+    #     pattern = re.escape(word1) + r'(.*?)' + re.escape(word2)
+    #     match = re.search(pattern, textual_component, re.DOTALL)
+    #     if match:
+    #         return match.group(1).strip()
+    #     else:
+    #         return None
