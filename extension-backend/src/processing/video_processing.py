@@ -1,7 +1,7 @@
-import numpy as np
+from __init__ import logger
+
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_audio
-from moviepy.editor import VideoFileClip
-import subprocess
+import cv2
 
 class VideoProcessing:
     def __init__(self, local_recording_path, meeting_id):
@@ -12,35 +12,61 @@ class VideoProcessing:
         # extract audio from webm and saves it locally as .wav file
         ffmpeg_extract_audio(self.local_recording_path, local_audio_path)
         
-    def capture_screenshots(self, interval=20):
+    def capture_screenshots(self, duration=15, interval=5):
         """
         Captures screenshots from a video file at specified intervals.
 
         interval: Interval in seconds between each screenshot.
         return: List of images.
         """
-        # convert webm to mp4
-        mp4_path = self.local_recording_path.replace("webm", "mp4")
+        # # convert webm to mp4
+        # mp4_path = self.local_recording_path.replace("webm", "mp4")
 
-        ffmpeg_command = [
-            "ffmpeg",
-            "-i",
-            self.local_recording_path,
-            mp4_path,
-            "-speed",
-            "16"
-        ]
-        subprocess.run(ffmpeg_command) 
+        # ffmpeg_command = [
+        #     "ffmpeg",
+        #     "-i",
+        #     self.local_recording_path,
+        #     mp4_path,
+        #     "-speed",
+        #     "16"
+        # ]
+        # subprocess.run(ffmpeg_command) 
 
-        # capture frames from mp4 in given interval
-        clip = VideoFileClip(mp4_path)
-        duration = clip.duration
-        screenshots = []
+        # # capture frames from mp4 in given interval
+        # clip = VideoFileClip(mp4_path)
+        # duration = clip.duration
+        # screenshots = []
 
-        for i in np.arange(0, duration, interval):
-            img = clip.get_frame(i)
-            screenshots.append(img)  
+        # for i in np.arange(0, duration, interval):
+        #     img = clip.get_frame(i)
+        #     screenshots.append(img)  
 
-        return screenshots
+        # os.remove(mp4_path)
+
+        # return screenshots
+
+        cap = cv2.VideoCapture(self.local_recording_path)
+
+        if not cap.isOpened():
+            logger.error("Error opening video file")
+            return None
+        
+        frames_to_capture = duration/interval
+
+        frames = []
+
+        # read and store the frames
+        count = 0
+        while cap.isOpened() and count < frames_to_capture:
+            ret, frame = cap.read()
+            if ret:
+                frames.append(frame)
+                count += 1
+            else:
+                break
+
+        cap.release()
+
+        return frames
 
       

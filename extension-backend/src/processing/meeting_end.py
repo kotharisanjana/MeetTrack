@@ -21,6 +21,9 @@ def on_end_processing(session_data):
   else:
     summary = None
 
+  # summary = """The meeting focused on the importance of vaccine mandates and the need to address staff concerns. The discussion highlighted the need for ongoing communication and consideration of alternative approaches. The potential risks of the virus spreading once borders open were also emphasized, leading to a cautious approach in decision-making."""
+  # meeting_id = 362
+
   # image-context and get image links
   if summary:
     image_url_desc_pairs = VisualComponent(meeting_id).get_contextual_images_from_summary(summary)

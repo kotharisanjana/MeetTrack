@@ -1,6 +1,6 @@
 from __init__ import llm_vision, embedding_model, logger
 from database.vector_db import store_description_embedding, get_relevant_images
-from database.relational_db import fetch_image_path
+from database.relational_db import fetch_image_paths
 
 class VisualComponent:
     def __init__(self, meeting_id):
@@ -8,7 +8,7 @@ class VisualComponent:
 
     def get_image_urls(self):
         # get list of image url for the current meeting from S3
-        self.image_urls = fetch_image_path(self.meeting_id)
+        self.image_urls = fetch_image_paths(self.meeting_id)
 
     def generate_image_descriptions(self):
         self.descriptions = {}
@@ -21,7 +21,7 @@ class VisualComponent:
                         {
                             "role": "user",
                             "content": [
-                                {"type": "text", "text": "Describe this image in detail for a mixed audience in a meeting."},
+                                {"type": "text", "text": "Describe this image from a meeting in 2 or 3 lines"},
                                 {"type": "image_url", "image_url": {"url": image_url}},
                             ],
                         }
@@ -54,5 +54,5 @@ class VisualComponent:
         self.generate_image_descriptions()
         self.image_description_embedding()
         summary_embedding = self.create_embedding(summary)
-        image_urls = get_relevant_images(summary_embedding)
+        image_urls = get_relevant_images(self.meeting_id, summary_embedding)
         return self.image_url_description_pairs(image_urls)

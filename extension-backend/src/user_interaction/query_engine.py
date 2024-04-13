@@ -135,6 +135,16 @@ class UserInteraction(CurrMeetingQueryEngine):
 
             while max_tries > 0:
                 agent_resp = self.get_response(user_query)
+
+                if "json" in agent_resp:
+                    logger.error("Agent did not return a valid response.") 
+                    max_tries -= 1
+
+                    if max_tries == 0:
+                        return None
+                    
+                    continue
+                    
                 outcome = user_interaction_gr_obj.validate(agent_resp)
 
                 if outcome:
@@ -144,6 +154,6 @@ class UserInteraction(CurrMeetingQueryEngine):
                         return agent_resp
                 
                 max_tries -= 1
-        else:
-            logger.error("Error in getting a response for user query.")
-            return None
+
+        logger.error("Error in getting a response for user query.")
+        return None

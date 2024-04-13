@@ -71,7 +71,7 @@ llm_chat = LangChainChatOpenAI(model_name="gpt-3.5-turbo",
                       temperature=0,
                       )
 
-llm_vision = LangChainOpenAI(model="gpt-4-vision-preview", 
+llm_vision = LangChainOpenAI(model="gpt-4-turbo", 
                     openai_api_key=os.getenv("OPENAI_API")
                     )
 

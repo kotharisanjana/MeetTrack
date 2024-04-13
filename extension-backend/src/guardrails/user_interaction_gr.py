@@ -14,7 +14,7 @@ class UserInteractionGR():
     def setup_guard(self):
         self.guard = Guard().use_many(
             GibberishText(
-                threshold=0.8,
+                threshold=0.5,
                 validation_method="sentence",
                 on_fail="reask"
             ),
@@ -23,7 +23,7 @@ class UserInteractionGR():
             ),
             ToxicLanguage(
                 validation_method="sentence",
-                threshold=0.8,
+                threshold=0.6,
                 on_fail="reask"
             )
         )

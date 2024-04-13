@@ -107,7 +107,7 @@ class TextualComponent:
             max_tries -= 1
 
         logger.error("Textual component creation failed.")
-        return None
+        return "Caution: Meeting notes could not be validated: \n\n" + text
     
     def extract_summary_from_textual_component(self, textual_component):
         # Extract meeting summary based on <summary></summary> tags.

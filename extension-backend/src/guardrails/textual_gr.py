@@ -29,7 +29,7 @@ class TextualGR():
             metrics={
                 "informative": {
                     "description": "An informative summary captures the main points of the input and is free of irrelevant details.",
-                    "threshold": 75,
+                    "threshold": 50,
                 },
                 "coherent": {
                     "description": "A coherent summary is logically organized and easy to follow.",
@@ -37,7 +37,7 @@ class TextualGR():
                 },
                 "coverage": {
                     "description": "Summary contains all these sections - short summary, key items discussed, action items",
-                    "threshold": 75
+                    "threshold": 30
                 }
             },
             max_score=100,

@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", function () {
     session_id = localStorage.getItem("session_id")
 
     if (session_id === null) {
-      alert("Please enter the session ID first.");
+      alert("Please enter the session ID.");
       return;
     }
 
@@ -173,6 +173,7 @@ document.addEventListener("DOMContentLoaded", function () {
     } else if (recording_status === "false") { 
       return;
     } else if (recording_status === "true" && fullShutdown === true) { // only the participant recording the meeting can end the session to ensure full meeting is recorded
+      alert("You will receive meeting notes shortly via email. Thank you for using MeetTrack.")
       await fetch("http://localhost:5000/end-session", {
         method: "POST",
         headers: {
@@ -181,17 +182,20 @@ document.addEventListener("DOMContentLoaded", function () {
         body: JSON.stringify({ session_id: session_id })
       })
       .then(response => {
-        if (response.status === 200 || response.status === 400) {
-          return response.json();
+        if (response.status === 200) {
+          return response.json().then(data => {
+            alert(data.message);
+            localStorage.clear();
+          });
+        } else if (response.status === 400) {
+          return response.json().then(data => {
+            alert(data.message);
+          });
         } else {
           return response.json().then(data => {
             throw new Error(data.message);
           });
         }
-      })
-      .then(data => {
-        alert(data.message);
-        localStorage.clear();
       })
       .catch(error => console.error("Error:", error));
     }
@@ -201,7 +205,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 chrome.runtime.onMessage.addListener(async (message) => {
-  console.log("Message received:", message.type);
   switch (message.type) {
     case "start-recording":
       startRecording(message.data);
