@@ -1,6 +1,10 @@
 from __init__ import llm_vision, embedding_model, logger
 from database.vector_db import store_description_embedding, get_relevant_images
-from database.relational_db import fetch_image_path
+from database.relational_db import fetch_image_paths
+from common.aws_utilities import download_file_from_s3
+
+from langchain_core.messages import HumanMessage
+import os
 
 class VisualComponent:
     def __init__(self, meeting_id):
@@ -8,29 +12,30 @@ class VisualComponent:
 
     def get_image_urls(self):
         # get list of image url for the current meeting from S3
-        self.image_urls = fetch_image_path(self.meeting_id)
+        self.image_urls = fetch_image_paths(self.meeting_id)
 
-    def generate_image_descriptions(self):
+    def generate_image_descriptions(self, local_images_path):
         self.descriptions = {}
 
         for image_url in self.image_urls:
+            local_path = os.path.join(local_images_path, image_url.split("/")[-1])
+            download_file_from_s3(image_url, local_path)
             try:
-                # use LLM to generate description for the image
-                response = llm_vision.chat.completions.create(
-                    messages=[
+                message = HumanMessage(
+                    content=[
                         {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": "Describe this image in detail for a mixed audience in a meeting."},
-                                {"type": "image_url", "image_url": {"url": image_url}},
-                            ],
-                        }
-                    ],
-                    max_tokens=300,
+                            "type": "text",
+                            "text": "Describe the image in 2-3 lines. Give an overview of what the whole image talks about",
+                        },
+                        {
+                            "type": "image_url", 
+                            "image_url": local_path
+                        },
+                    ]
                 )
 
-                desc = response.choices[0].message.content
-                self.descriptions[image_url] = desc.strip()
+                response = llm_vision.invoke([message])
+                self.descriptions[image_url] = response.content
             except Exception as e:
                 self.descriptions[image_url] = "Error retrieving description for this image"
                 logger.error(f"Error generating description for image {image_url}: {e}")
@@ -47,12 +52,16 @@ class VisualComponent:
             idx += 1
 
     def image_url_description_pairs(self, image_urls):
-        return dict((image_url, self.descriptions[image_url]) for image_url in image_urls)
+        image_desc_pairs = {}
+        for img in image_urls:
+            image_desc_pairs[img] = self.descriptions[img]
 
-    def get_contextual_images_from_summary(self, summary):
+        return image_desc_pairs
+    
+    def get_contextual_images_from_summary(self, summary, local_images_path):
         self.get_image_urls()
-        self.generate_image_descriptions()
+        self.generate_image_descriptions(local_images_path)
         self.image_description_embedding()
         summary_embedding = self.create_embedding(summary)
-        image_urls = get_relevant_images(summary_embedding)
+        image_urls = get_relevant_images(self.meeting_id, summary_embedding)
         return self.image_url_description_pairs(image_urls)

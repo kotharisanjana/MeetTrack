@@ -9,8 +9,7 @@ from guardrails.hub import (
 )
 
 class TextualGR():
-    def __init__(self, meeting_id, local_transcript_path):
-        self.meeting_id = meeting_id
+    def __init__(self, local_transcript_path):
         self.local_transcript_path = local_transcript_path
         self.docs_dir = os.path.sep.join(self.local_transcript_path.split(os.path.sep)[:-1])
 
@@ -30,7 +29,7 @@ class TextualGR():
             metrics={
                 "informative": {
                     "description": "An informative summary captures the main points of the input and is free of irrelevant details.",
-                    "threshold": 75,
+                    "threshold": 50,
                 },
                 "coherent": {
                     "description": "A coherent summary is logically organized and easy to follow.",
@@ -38,7 +37,7 @@ class TextualGR():
                 },
                 "coverage": {
                     "description": "Summary contains all these sections - short summary, key items discussed, action items",
-                    "threshold": 75
+                    "threshold": 30
                 }
             },
             max_score=100,

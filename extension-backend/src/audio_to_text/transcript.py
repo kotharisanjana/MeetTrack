@@ -18,7 +18,7 @@ def combine_asr_diarization(speaker_segments, transcript_segments):
         actual_speaker = get_actual_speaker(int(speaker_id))
 
         if segment_num!=1:
-            overall_text = overall_text + "\n" + "Speaker " + actual_speaker + ":"
+            overall_text = overall_text + "\n\n" + actual_speaker + ": "
 
         while segment_num<l:
             tstime = transcript_segments[segment_num].start_time

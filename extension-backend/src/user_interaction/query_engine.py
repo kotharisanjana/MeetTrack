@@ -131,19 +131,18 @@ class UserInteraction(CurrMeetingQueryEngine):
         if self.query_plan_tool:
             self.create_agent()
 
-            max_tries = 2
+            agent_resp = self.get_response(user_query)
 
-            while max_tries > 0:
-                agent_resp = self.get_response(user_query)
-                outcome = user_interaction_gr_obj.validate(agent_resp)
-
-                if outcome:
-                    # if response passes guardrails validation, break out of the loop and return response
-                    if outcome.reask is None:
-                        logger.info("User query response completed and validated.")
-                        return agent_resp
-                
-                max_tries -= 1
-        else:
-            logger.error("Error in getting a response for user query.")
-            return None
+            if "json" in agent_resp:
+                logger.error("Agent did not return a valid response.") 
+                return None
+                           
+            outcome = user_interaction_gr_obj.validate(agent_resp)
+            if outcome:
+                # if response passes guardrails validation, break out of the loop and return response
+                if outcome.reask is None:
+                    logger.info("User query response completed and validated.")
+                    return agent_resp
+            
+        logger.error("Error in getting a response for user query.")
+        return None

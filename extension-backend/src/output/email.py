@@ -13,6 +13,7 @@ def send_email(session_data):
     meeting_name = session_data["meeting_name"]
     meeting_date = session_data["meeting_date"]
     local_output_path = session_data["local_output_path"]
+    local_transcript_path = session_data["local_transcript_path"]
     
     # download final document from S3
     output_path = fetch_output_path(meeting_id)
@@ -22,8 +23,8 @@ def send_email(session_data):
     recipient_email = fetch_email(meeting_id)
     sender_email = os.getenv("SENDER_EMAIL")
     sender_password = os.getenv("SENDER_PASSWORD")
-    subject = f"Meeting Notes from {meeting_name} on {meeting_date}"
-    body = "Please find attached meeting notes from the meeting"
+    subject = f"Notes & Transcript from {meeting_name} on {meeting_date}"
+    body = "Hello, \n\n " + "Please find attached meeting notes and transcript. \n\n" + "Regards, \n" + "Team MeetTrack"
 
     # create MIME multipart message
     msg = MIMEMultipart()
@@ -34,12 +35,18 @@ def send_email(session_data):
     # attach the body with the msg instance
     msg.attach(MIMEText(body, 'plain'))
 
-    # open the file to be sent
+    # open the meeting notes file to be sent
     with open(local_output_path, "rb") as attachment:
         part = MIMEApplication(attachment.read(), Name=os.path.basename(local_output_path))
-
     # after the file is closed
     part["Content-Disposition"] = f'attachment; filename="{os.path.basename(local_output_path)}"'
+    msg.attach(part)
+
+    # open the transcript file to be sent
+    with open(local_transcript_path, "rb") as attachment:
+        part = MIMEApplication(attachment.read(), Name=os.path.basename(local_transcript_path))
+    # after the file is closed
+    part["Content-Disposition"] = f'attachment; filename="{os.path.basename(local_transcript_path)}"'
     msg.attach(part)
 
     # setup the SMTP server and send email to the recipient

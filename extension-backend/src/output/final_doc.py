@@ -5,6 +5,7 @@ from docx import Document
 from docx.shared import Inches
 from io import BytesIO
 from PIL import Image
+import re
 
 def create_final_doc(session_data, textual_component, image_url_desc_pairs):
     meeting_id = session_data["meeting_id"]
@@ -14,10 +15,13 @@ def create_final_doc(session_data, textual_component, image_url_desc_pairs):
 
     header = "Meeting Name: " + meeting_name + "\n" + "Meeting Date: " + meeting_date
 
+    # remove <summary> tag from textual component
+    tc = re.sub(r'<summary>(.*?)</summary>', r'\1', textual_component, flags=re.DOTALL)
+
     doc = Document()
     # Add meeting details and textual component to the document
     doc.add_paragraph(header)
-    doc.add_paragraph(textual_component)
+    doc.add_paragraph(tc)
     
     for url, desc in image_url_desc_pairs.items():
         image_bytes = get_s3_image_bytes(url)

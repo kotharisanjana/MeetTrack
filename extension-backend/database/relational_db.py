@@ -193,9 +193,13 @@ def fetch_email(meeting_id):
     try:
         sql = "SELECT recipient_email FROM email WHERE meeting_id=%s;"
         conn_cursor.execute(sql, (meeting_id, ))
-        email = conn_cursor.fetchone()[0]
+        email = conn_cursor.fetchone()
 
-        logger.info("Email fetched successfully")
+        if email:
+            email = email[0]
+            logger.info("Email fetched successfully")
+        else:
+            email = None
         return email
     except (Exception, psycopg2.DatabaseError) as error:
         logger.error(f"Error in fetch_email(): {error}")
@@ -252,7 +256,7 @@ def fetch_prev_transcript_path(meeting_name, meeting_id):
     prev_meeting_ids = []
 
     try:
-        sql = "SELECT meeting_id from meeting_details WHERE meeting_name=%s and meeting_id<>%s;"
+        sql = "SELECT meeting_id FROM meeting_details WHERE meeting_name=%s and meeting_id<>%s;"
         conn_cursor.execute(sql, (meeting_name, meeting_id))
         prev_meeting_ids = [row[0] for row in conn_cursor.fetchall()]
     except (Exception, psycopg2.DatabaseError) as error:
@@ -260,7 +264,7 @@ def fetch_prev_transcript_path(meeting_name, meeting_id):
 
     if prev_meeting_ids:
         try:
-            sql = "SELECT transcript_path from s3_paths WHERE meeting_id=%s;"
+            sql = "SELECT transcript_path FROM s3_paths WHERE meeting_id=%s;"
             transcript_paths = []
             for meeting_id in prev_meeting_ids:
                 conn_cursor.execute(sql, (meeting_id, ))
@@ -281,9 +285,9 @@ def fetch_recording_status(meeting_id):
     :return: True if successful, False if status does not exist, None otherwise
     """
     try:
-        sql = "SELECT status from recording_status WHERE meeting_id=%s;"
+        sql = "SELECT status FROM recording_status WHERE meeting_id=%s;"
         conn_cursor.execute(sql, (meeting_id, ))
-        status = conn_cursor.fetchone()[0]
+        status = conn_cursor.fetchone()
 
         if status:
             logger.info("Recording status fetched successfully")
@@ -304,7 +308,7 @@ def fetch_output_path(meeting_id):
     :return: Output path if successful, None otherwise
     """
     try:
-        sql = "SELECT output_path from s3_paths WHERE meeting_id=%s;"
+        sql = "SELECT output_path FROM s3_paths WHERE meeting_id=%s;"
         conn_cursor.execute(sql, (meeting_id, ))
         output_path = conn_cursor.fetchone()[0]
 
@@ -315,7 +319,27 @@ def fetch_output_path(meeting_id):
         return None
     
 
-def fetch_image_path(meeting_id):
+def fetch_recording_paths(meeting_id):
+    """
+    Retrieves recording path from relational database.
+    
+    :param meeting_id: ID of the meeting
+    :return: Recording path if successful, None otherwise
+    """
+    try:
+        sql = "SELECT recording_path FROM recordings WHERE meeting_id=%s;"
+        conn_cursor.execute(sql, (meeting_id, ))
+        recording_path = [row[0] for row in conn_cursor.fetchall()]
+
+        logger.info("Recording paths fetched successfully")
+        return recording_path
+    except (Exception, psycopg2.DatabaseError) as error:
+        logger.error(f"Error in fetch_recording_paths(): {error}")
+        return None
+
+    
+
+def fetch_image_paths(meeting_id):
     """
     Retrieves image paths from relational database.
     
@@ -323,14 +347,14 @@ def fetch_image_path(meeting_id):
     :return: List of image paths if successful, None otherwise
     """
     try:
-        sql = "SELECT image_path from images WHERE meeting_id=%s;"
+        sql = "SELECT image_path FROM images WHERE meeting_id=%s;"
         conn_cursor.execute(sql, (meeting_id, ))
         image_paths = [row[0] for row in conn_cursor.fetchall()]
 
         logger.info("Image paths fetched successfully")
         return image_paths
     except (Exception, psycopg2.DatabaseError) as error:
-        logger.error(f"Error in fetch_image_path(): {error}")
+        logger.error(f"Error in fetch_image_paths(): {error}")
         return None
     
 
