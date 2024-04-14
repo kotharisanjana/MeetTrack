@@ -32,6 +32,7 @@ def update_session_data(session_id, meeting_id, session_data):
   session_data["local_transcript_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}/transcript/transcript.txt")
   session_data["local_diarization_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}/diarization/diarization.txt")
   session_data["local_output_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}/output/output.docx")
+  session_data["local_images_path"] = os.path.join(global_vars.DOWNLOAD_DIR, f"{meeting_id}/screenshots")
 
   updated_session_json = json.dumps(session_data)
   redis_client.set(session_id, updated_session_json)
@@ -48,6 +49,7 @@ def create_local_directories(meeting_id):
   os.makedirs(os.path.join(directory_path,"output"), exist_ok=True)
   os.makedirs(os.path.join(directory_path, "diarization"), exist_ok=True)
   os.makedirs(os.path.join(directory_path, "prev"), exist_ok=True)
+  os.makedirs(os.path.join(directory_path, "screenshots"), exist_ok=True)
 
   logger.info(f"Local directories created for meeting_id: {meeting_id}")
 

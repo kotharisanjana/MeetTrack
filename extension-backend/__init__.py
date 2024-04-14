@@ -9,7 +9,8 @@ from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline
 from qdrant_client import QdrantClient
 from llama_index.llms.openai import OpenAI as LlamaOpenAI
-from langchain_openai import OpenAI as LangChainOpenAI, ChatOpenAI as LangChainChatOpenAI
+from langchain_openai import ChatOpenAI as LangChainChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 import openai
 from sentence_transformers import SentenceTransformer
 from redis import Redis
@@ -25,6 +26,7 @@ load_dotenv()
 # set up OpenAI API key
 openai.api_key = os.getenv("OPENAI_API")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API")
+os.environ['GOOGLE_API_KEY'] = os.getenv("GOOGLE_API_KEY")
 
 # set up Redis client
 redis_client = Redis(host="localhost", port=6379, db=0)
@@ -71,9 +73,7 @@ llm_chat = LangChainChatOpenAI(model_name="gpt-3.5-turbo",
                       temperature=0,
                       )
 
-llm_vision = LangChainOpenAI(model="gpt-4-turbo", 
-                    openai_api_key=os.getenv("OPENAI_API")
-                    )
+llm_vision = ChatGoogleGenerativeAI(model="gemini-pro-vision")
 
 embedding_model = SentenceTransformer("avsolatorio/GIST-Embedding-v0")
 

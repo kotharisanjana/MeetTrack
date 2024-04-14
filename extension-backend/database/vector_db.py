@@ -87,12 +87,12 @@ def get_relevant_images(meeting_id, summary_embedding):
         res = vector_db_client.search(
             collection_name="image-description-embeddings",
             query_vector=summary_embedding.tolist(),
-            top=3,
+            limit=3,
             query_filter=models.Filter(
                 must=[
                     models.FieldCondition(
                         key="meeting_id",
-                        range=models.MatchValue(value=meeting_id)
+                        match=models.MatchValue(value=meeting_id)
                     )
                 ]
             ),

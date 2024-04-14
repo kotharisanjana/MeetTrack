@@ -164,7 +164,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
   endButton.addEventListener("click", async function () {
-    session_id = localStorage.getItem("session_id");
     recording_status = localStorage.getItem("recording_status");
 
     if (recording_status === "true" && fullShutdown === false) {
@@ -174,34 +173,53 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     } else if (recording_status === "true" && fullShutdown === true) { // only the participant recording the meeting can end the session to ensure full meeting is recorded
       alert("You will receive meeting notes shortly via email. Thank you for using MeetTrack.")
-      await fetch("http://localhost:5000/end-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ session_id: session_id })
-      })
-      .then(response => {
-        if (response.status === 200) {
-          return response.json().then(data => {
-            alert(data.message);
-            localStorage.clear();
-          });
-        } else if (response.status === 400) {
-          return response.json().then(data => {
-            alert(data.message);
-          });
-        } else {
-          return response.json().then(data => {
-            throw new Error(data.message);
-          });
-        }
-      })
-      .catch(error => console.error("Error:", error));
+      monitorQueue();
     }
   });
 
 });
+
+
+function monitorQueue() {
+  const queueMonitor = setInterval(() => {
+    if (processingQueue.length === 0 && isProcessing === false) {
+      // stop monitoring the queue
+      clearInterval(queueMonitor);
+      // call function that ends the session
+      endSession();
+    }
+  }, 10000);
+}
+
+
+async function endSession() {
+  session_id = localStorage.getItem("session_id");
+  
+  await fetch("http://localhost:5000/end-session", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ session_id: session_id })
+  })
+  .then(response => {
+    if (response.status === 200) {
+      return response.json().then(data => {
+        alert(data.message);
+        localStorage.clear();
+      });
+    } else if (response.status === 400) {
+      return response.json().then(data => {
+        alert(data.message);
+      });
+    } else {
+      return response.json().then(data => {
+        throw new Error(data.message);
+      });
+    }
+  })
+  .catch(error => console.error("Error:", error));
+}
 
 
 chrome.runtime.onMessage.addListener(async (message) => {
