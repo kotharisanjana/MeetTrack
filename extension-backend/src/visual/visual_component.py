@@ -1,7 +1,10 @@
 from __init__ import llm_vision, embedding_model, logger
 from database.vector_db import store_description_embedding, get_relevant_images
 from database.relational_db import fetch_image_paths
-
+from langchain_core.messages import HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+# pip install -U langchain-google-genai
+# os.environ['GOOGLE_API_KEY'] = ''
 class VisualComponent:
     def __init__(self, meeting_id):
         self.meeting_id = meeting_id
@@ -12,9 +15,18 @@ class VisualComponent:
 
     def generate_image_descriptions(self):
         self.descriptions = {}
-
+        llm = ChatGoogleGenerativeAI(model="gemini-pro-vision")
         for image_url in self.image_urls:
             try:
+                message = HumanMessage(
+                content=[
+                {
+                    "type": "text",
+                    "text": "Describe the image in 2-3 lines. Give an overview of what the whole image talks about",
+                },
+                {"type": "image_url", "image_url": image_url},
+                ]
+            )
                 # use LLM to generate description for the image
                 response = llm_vision.chat.completions.create(
                     messages=[
@@ -29,8 +41,8 @@ class VisualComponent:
                     max_tokens=300,
                 )
 
-                desc = response.choices[0].message.content
-                self.descriptions[image_url] = desc.strip()
+                response = llm.invoke([message])
+                self.descriptions[image_url] = response.content
             except Exception as e:
                 self.descriptions[image_url] = "Error retrieving description for this image"
                 logger.error(f"Error generating description for image {image_url}: {e}")
