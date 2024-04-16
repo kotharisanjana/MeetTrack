@@ -29,7 +29,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API")
 os.environ['GOOGLE_API_KEY'] = os.getenv("GOOGLE_API_KEY")
 
 # set up Redis client
-redis_client = Redis(host=os.getenv("REDIS"), port=global_vars.PERMANENT_SESSION_LIFETIME, db=0)
+redis_client = Redis(host=os.getenv("EC2"), port=6379, db=0)
 
 
 # set up Postgres connection

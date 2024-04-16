@@ -19,7 +19,7 @@ app = Flask(__name__)
 
 # Set the session mechanism details
 app.config["SESSION_TYPE"] = global_vars.SESSION_TYPE
-app.config["SESSION_REDIS"] = "redis://" + os.getenv("REDIS_URL") + "/0"
+app.config["SESSION_REDIS"] = "redis://" + os.getenv("EC2") + ":6379/0"
 app.config["PERMANENT_SESSION_LIFETIME"] = global_vars.PERMANENT_SESSION_LIFETIME
 
 # Enable CORS
