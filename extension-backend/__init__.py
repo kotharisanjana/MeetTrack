@@ -29,7 +29,7 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API")
 os.environ['GOOGLE_API_KEY'] = os.getenv("GOOGLE_API_KEY")
 
 # set up Redis client
-redis_client = Redis(host="localhost", port=6379, db=0)
+redis_client = Redis(host=os.getenv("REDIS"), port=global_vars.PERMANENT_SESSION_LIFETIME, db=0)
 
 
 # set up Postgres connection
@@ -58,25 +58,30 @@ except Exception as e:
 
 # initialize models
 asr_model = WhisperModel("tiny", compute_type="int8")
+logger.info("ASR model initialized successfully.")
 
 diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.0", 
                                                 use_auth_token=os.getenv("HF_API")
                                                 )
+logger.info("Diarization pipeline initialized successfully.")
 
 llm = LlamaOpenAI(model="gpt-4", 
              openai_api_key=os.getenv("OPENAI_API"),
              temperature=0,
              )
+logger.info("Llama OpenAI model initialized successfully.")
 
 llm_chat = LangChainChatOpenAI(model_name="gpt-3.5-turbo",
                       openai_api_key=os.getenv("OPENAI_API"),
                       temperature=0,
                       )
+logger.info("LangChain OpenAI model initialized successfully.")
 
 llm_vision = ChatGoogleGenerativeAI(model="gemini-pro-vision")
+logger.info("LangChain Google Generative AI model initialized successfully.")
 
-embedding_model = SentenceTransformer("avsolatorio/GIST-Embedding-v0")
-
+embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cpu")
+logger.info("Sentence Transformer model initialized successfully.")
 
 # initialize S3 client
 try:

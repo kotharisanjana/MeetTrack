@@ -1,10 +1,6 @@
 RECORDING_GLOBAL_INDEX = 0
 IMAGES_GLOBAL_INDEX = 0
 
-SESSION_TYPE = "redis"
-REDIS_SESSION = "redis://localhost:6379/0"
-PERMANENT_SESSION_LIFETIME = 7200 
-
 S3_BUCKET = "meet-track-storage"
 RECORDINGS_FOLDER = "recordings"
 SCREENSHOTS_FOLDER = "screenshots"
@@ -12,6 +8,9 @@ TRANSCRIPTION_FOLDER = "transcription"
 DIARIZATION_FOLDER = "diarization"
 OUTPUT_FOLDER = "finaldocument"
 
-DOWNLOAD_DIR = "/home/sanjana/Desktop/Masters_Project/testing"
+SESSION_TYPE = "redis"
+PERMANENT_SESSION_LIFETIME = 7200 
 
-LOGGING_FILE = "/home/sanjana/Desktop/Masters_Project/logs/logs.log"
+DOWNLOAD_DIR = "/home/ubuntu/Project/testing"
+
+LOGGING_FILE = "/home/ubuntu/Project/logs/logs.log"

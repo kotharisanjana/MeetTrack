@@ -12,13 +12,14 @@ from src.processing.image_processing import ImageProcessing
 from flask import Flask, jsonify, request
 from flask_session import Session
 from flask_cors import CORS
+import os
 
 # Initialize the Flask application
 app = Flask(__name__)
 
 # Set the session mechanism details
 app.config["SESSION_TYPE"] = global_vars.SESSION_TYPE
-app.config["SESSION_REDIS"] = global_vars.REDIS_SESSION
+app.config["SESSION_REDIS"] = "redis://" + os.getenv("REDIS_URL") + "/0"
 app.config["PERMANENT_SESSION_LIFETIME"] = global_vars.PERMANENT_SESSION_LIFETIME
 
 # Enable CORS
@@ -192,4 +193,4 @@ def end_session():
 
 
 if __name__ == "__main__":
-  app.run(debug=False)
+  app.run(host="0.0.0.0", port=5000, debug=False)

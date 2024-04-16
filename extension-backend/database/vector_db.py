@@ -10,24 +10,26 @@ def get_actual_speaker(speaker_id):
     :param speaker_id: Speaker ID
     :return: Actual speaker name
     """
-    # retrieve the identified speaker embedding
-    identified_speaker_record = vector_db_client.retrieve(
-        collection_name="identified-speaker-embeddings",
-        ids=[speaker_id],
-        with_vectors=True
-    )
-    identified_speaker_vector = identified_speaker_record[0].vector
+    try:
+        # retrieve the identified speaker embedding
+        identified_speaker_record = vector_db_client.retrieve(
+            collection_name="identified-speaker-embeddings",
+            ids=[speaker_id],
+            with_vectors=True
+        )
+        identified_speaker_vector = identified_speaker_record[0].vector
 
-    # search for the actual speaker embedding closest to the identified speaker embedding
-    speaker_match = vector_db_client.search(
-        collection_name="actual-speaker-embeddings", 
-        query_vector=identified_speaker_vector, 
-        limit=1
-    )
-
-    actual_speaker = speaker_match[0].payload["speaker"]   
-
-    return actual_speaker
+        # search for the actual speaker embedding closest to the identified speaker embedding
+        speaker_match = vector_db_client.search(
+            collection_name="actual-speaker-embeddings", 
+            query_vector=identified_speaker_vector, 
+            limit=1
+        )
+        actual_speaker = speaker_match[0].payload["speaker"]   
+        return actual_speaker   
+    except Exception as e:
+        logger.error(f"Error retrieving actual speaker: {e}")
+        return None
 
 
 def store_speaker_embedding(embeddings):

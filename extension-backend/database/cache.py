@@ -48,19 +48,24 @@ def get_session_id(meeting_name):
     :param meeting_name: Name of the meeting
     :return: Session ID if session exists, else None
     """
-    redis_client = get_redis_client()
-    all_sessions = redis_client.keys('*')
+    try:
+        redis_client = get_redis_client()
+        all_sessions = redis_client.keys('*')
 
-    # Iterate over existing sessions
-    for sess_key in all_sessions:
-        sess_data = redis_client.get(sess_key)
-        sess_dict = json.loads(sess_data)
+        # Iterate over existing sessions
+        for sess_key in all_sessions:
+            sess_data = redis_client.get(sess_key)
+            sess_dict = json.loads(sess_data.decode('utf-8'))  # Decode bytes to str
 
-        # if the meeting name and date match, return the session ID
-        if sess_dict.get("meeting_name") == meeting_name and sess_dict.get("meeting_date") == get_date():
-            return sess_key.decode('utf-8')
-        
-    return None
+            # if the meeting name matches, return the session ID
+            if sess_dict.get("meeting_name") == meeting_name:
+                return sess_key.decode('utf-8')
+
+        return None
+    except Exception as e:
+        # Log the error or handle it appropriately
+        logger.error(f"Error in get_session_id: {e}")
+        return None
 
 
 def retrieve_session_data(session_id):
@@ -70,13 +75,17 @@ def retrieve_session_data(session_id):
     :param session_id: Session ID
     :return: Session data if session exists, else empty dictionary
     """
-    redis_client = get_redis_client()
-    session_json = redis_client.get(session_id)
+    try:
+        redis_client = get_redis_client()
+        session_json = redis_client.get(session_id)
 
-    if session_json:
-        session_data = json.loads(session_json)
-        return session_data
-    else:
+        if session_json:
+            session_data = json.loads(session_json)
+            return session_data
+        else:
+            return {}
+    except Exception as e:
+        logger.error(f"Error in retrieve_session_data: {e}")
         return {}
     
 
@@ -86,6 +95,9 @@ def delete_session(session_id):
     
     :param session_id: Session ID
     """
-    redis_client = get_redis_client()
-    redis_client.delete(session_id)
-    logger.info(f"Session {session_id} deleted successfully")
+    try:
+        redis_client = get_redis_client()
+        redis_client.delete(session_id)
+        logger.info(f"Session {session_id} deleted successfully")
+    except Exception as e:
+        logger.error(f"Error in delete_session: {e}")

@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "MeetTrack",
     "version": "1.0",
-    "description": "A Chrome extension to capture screen and open a user input box.",
+    "description": "MeetTrack meeting assistant",
     "permissions": ["tabCapture", "offscreen"],
     "background": {
         "service_worker": "service-worker.js"
@@ -15,5 +15,8 @@
     },
     "icons": {
         "16": "icon.png"
-    }
+    },
+    "host_permissions": [
+        "http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/"
+    ]
 }
