@@ -17,6 +17,15 @@
         "16": "icon.png"
     },
     "host_permissions": [
-        "http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/"
+        "http://ec2-3-144-36-180.us-east-2.compute.amazonaws.com:5000/"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "*://meet.google.com/*",
+                "*://app.zoom.us/*"
+            ],
+            "js": ["extension.js"]
+        }
     ]
 }

@@ -25,7 +25,8 @@ class VisualComponent:
                     content=[
                         {
                             "type": "text",
-                            "text": "Describe the image in 2-3 lines. Give an overview of what the whole image talks about",
+                            "text": """Describe what is presented in the image and ignore details around speaker windows.
+                            Give an overview in 2-3 lines and capture important details.""",
                         },
                         {
                             "type": "image_url", 
