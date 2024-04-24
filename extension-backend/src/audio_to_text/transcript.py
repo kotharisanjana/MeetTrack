@@ -12,7 +12,7 @@ def combine_asr_diarization(speaker_segments, transcript_segments):
 
     # get actual speaker based on voice embeddings
     actual_speaker = get_actual_speaker(int(speaker_segments[0].speaker.speaker_id))
-    overall_text = "Speaker " + actual_speaker + ":" + transcript_segments[0].text.text
+    overall_text = actual_speaker + ":" + transcript_segments[0].text.text + "\n\n"
 
     # create final output by assigning actual speakers to dialogues
     for segment in speaker_segments:

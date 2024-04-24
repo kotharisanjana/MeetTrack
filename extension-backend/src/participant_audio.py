@@ -12,7 +12,7 @@ each stored on your local in the directory specified by VOICE_RECORDINGS_DIR.
 The filename should be in the format: <speaker_name>.wav
 """
 
-VOICE_RECORDINGS_DIR = "/home/sanjana/Desktop/Masters_Project/MeetTrack/voice_recordings"
+VOICE_RECORDINGS_DIR = ""
 
 class ParticipantVoiceEmbeddings:
     def __init__(self):
@@ -33,23 +33,23 @@ class ParticipantVoiceEmbeddings:
     def create_voice_embedding(self):
         _, self.embedding = self.pipeline({"waveform": self.tensor_data, "sample_rate": self.samplerate}, return_embeddings=True)
 
-    def store_voice_embedding(self, speaker_name):
+    def store_voice_embedding(self, speaker_name, i):
         # insert voice emebdding into vector database
         self.client.upsert(
             collection_name="actual-speaker-embeddings",
             wait=True,
             points=[
-                PointStruct(id=speaker_name, payload={"speaker": speaker_name}, vector=self.embedding[0].tolist())
+                PointStruct(id=i, payload={"speaker": speaker_name}, vector=self.embedding[0].tolist())
             ]
         )
 
     def voice_embedding_pipeline(self):
-        for filename in os.listdir(VOICE_RECORDINGS_DIR):
+        for i, filename in enumerate(os.listdir(VOICE_RECORDINGS_DIR)):
             audio_filepath = os.path.join(VOICE_RECORDINGS_DIR, filename)
             self.read_audio_file(audio_filepath)
             self.transform_audio()
             self.create_voice_embedding()
-            self.store_voice_embedding(filename.split(".")[0], self.embedding)
+            self.store_voice_embedding(filename.split(".")[0], i)
 
 # run the pipeline
 ParticipantVoiceEmbeddings().voice_embedding_pipeline()
