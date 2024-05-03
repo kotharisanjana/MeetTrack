@@ -65,7 +65,7 @@ diarization_pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization-3.
                                                 )
 logger.info("Diarization pipeline initialized successfully.")
 
-llm = LlamaOpenAI(model="gpt-4", 
+llm = LlamaOpenAI(model="gpt-3.5-turbo", 
              openai_api_key=os.getenv("OPENAI_API"),
              temperature=0,
              )

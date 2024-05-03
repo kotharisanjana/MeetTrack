@@ -96,7 +96,7 @@ class UserInteraction(CurrMeetingQueryEngine):
         if prev_meeting_tool and self.curr_meeting_tool:
             tools = [prev_meeting_tool, self.curr_meeting_tool]
         elif prev_meeting_tool:
-            tools = [self.prev_meeting_tool]
+            tools = [prev_meeting_tool]
         elif self.curr_meeting_tool:
             tools = [self.curr_meeting_tool]
         else:

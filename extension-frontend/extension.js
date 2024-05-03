@@ -7,7 +7,7 @@ let media = null;
 let isProcessing = false;
 
 const processingQueue = [];
-const server = "http://ec2-18-224-93-7.us-east-2.compute.amazonaws.com:5000"
+const server = "http://ec2-3-144-155-181.us-east-2.compute.amazonaws.com:5000"
 
 document.addEventListener("DOMContentLoaded", function () {
   // get all DOM elements
