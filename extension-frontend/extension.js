@@ -4,8 +4,10 @@ let data = [];
 let mediaStreamFlag = true;
 let recorderStateFlag = true;
 let media = null;
-const processingQueue = [];
 let isProcessing = false;
+
+const processingQueue = [];
+const server = "http://ec2-3-144-155-181.us-east-2.compute.amazonaws.com:5000"
 
 document.addEventListener("DOMContentLoaded", function () {
   // get all DOM elements
@@ -23,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var meetingName = document.getElementById('meetingName').value;
     var meetingType = document.querySelector('input[name="meetingType"]:checked').value;
 
-    fetch("http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/submit-details", {
+    fetch(server + "/submit-details", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -52,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
     event.preventDefault();
     var session_id = document.getElementById('sessionID').value;
 
-    fetch("http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/access-session", {
+    fetch(server + "/access-session", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -110,7 +112,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    await fetch("http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/submit-recipient-email", {
+    await fetch(server + "/submit-recipient-email", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -138,7 +140,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var userInput = document.getElementById('userInput').value;
     session_id = localStorage.getItem("session_id");
 
-    await fetch("http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/answer-query", {
+    await fetch(server + "/answer-query", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -170,10 +172,33 @@ document.addEventListener("DOMContentLoaded", function () {
     if (recording_status === "true" && fullShutdown === false) {
       alert("Stop recording before ending the session");
       return;
-    } else if (recording_status === "false") { 
+    } 
+    else if (recording_status === "false") { 
       return;
-    } else if (recording_status === "true" && fullShutdown === true) { // only the participant recording the meeting can end the session to ensure full meeting is recorded
-      alert("You will receive meeting notes shortly via email. Thank you for using MeetTrack.")
+    } 
+    else if (recording_status === "true" && fullShutdown === true) { // only the participant recording the meeting can end the session to ensure full meeting is recorded
+      session_id = localStorage.getItem("session_id");
+
+      await fetch(server + "/check-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ session_id: session_id })
+        })
+        .then(response => {
+          if (response.status === 200 || response.status === 400) {
+            return response.json().then(data => {
+              alert(data.message);
+            });
+          } else {
+            return response.json().then(data => {
+              throw new Error(data.message);
+            });
+          }
+        })
+        .catch(error => console.error("Error:", error));
+            
       monitorQueue();
     }
   });
@@ -182,6 +207,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 function monitorQueue() {
+  // monitor processing queue every 10 seconds 
   const queueMonitor = setInterval(() => {
     if (processingQueue.length === 0 && isProcessing === false) {
       // stop monitoring the queue
@@ -196,7 +222,7 @@ function monitorQueue() {
 async function endSession() {
   session_id = localStorage.getItem("session_id");
   
-  await fetch("http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/end-session", {
+  await fetch(server + "/end-session", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -208,10 +234,6 @@ async function endSession() {
       return response.json().then(data => {
         alert(data.message);
         localStorage.clear();
-      });
-    } else if (response.status === 400) {
-      return response.json().then(data => {
-        alert(data.message);
       });
     } else {
       return response.json().then(data => {
@@ -312,7 +334,7 @@ async function startRecording(streamId) {
         // Set a timer to stop the recording after 30 seconds 
         stopTimer = setTimeout(async () => {
           await stopRecording();
-        }, 15000);
+        }, 30000);
       }
     } else {
       alert(responseData.message);
@@ -326,7 +348,7 @@ async function startRecording(streamId) {
 
 async function checkRecordingStatus(session_id){
   try{
-    const recordingStatusResponse = await fetch("http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/recording-status", {
+    const recordingStatusResponse = await fetch(server + "/recording-status", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -335,9 +357,9 @@ async function checkRecordingStatus(session_id){
     });
     return recordingStatusResponse;
    } catch (error) {
-   console.error("Error fetching recording status:", error);
-   return null;
- }
+      console.error("Error fetching recording status:", error);
+      return null;
+  }
 }
 
 
@@ -380,7 +402,7 @@ async function processRecording(blob, session_id){
     formData.append("recording", blob);
     formData.append("session_id", session_id);
 
-    const response = await fetch("http://ec2-3-17-39-185.us-east-2.compute.amazonaws.com:5000/process-recording", {
+    const response = await fetch(server + "/process-recording", {
         method: "POST",
         body: formData
     })

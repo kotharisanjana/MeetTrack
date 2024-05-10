@@ -38,7 +38,7 @@ class TextualComponent:
             After the summary, add the following sections and use bullet points if needed:
             Tasks:
             - highlight the key discussions
-            - highlight action items with owner names
+            - highlight action items with speaker names
             - highlight any other important details under appropriate headings
             {text}
             CONCISE MEETING NOTES IN ENGLISH:
@@ -57,6 +57,7 @@ class TextualComponent:
         Given the new context, perform the following tasks:
         - Refine the summary that is enclosed in <summary></summary> tags and keep it in between the tags.
         - Ensure all sections and bullet points after the summary are maintained as is in the existing meeting notes, while excluding the meeting transcript sections.
+        - Remove hallucinations and adhere to the actual meeting content.
 
         If the context isn't useful, return the original meeting notes as is.
         """

@@ -168,10 +168,10 @@ def answer_query():
       return jsonify({"message": "Sorry, I am unable to answer your query at the moment. Please try again later."}), 400
   except Exception as e:
     return jsonify({"message": str(e)}), 500
+  
 
-
-@app.route("/end-session", methods=["POST"])
-def end_session():
+@app.route("/check-email", methods=["POST"])
+def check_email():
   try:
     session_id = request.json.get("session_id")
 
@@ -180,8 +180,19 @@ def end_session():
 
     recipient_email = fetch_email(meeting_id)
 
-    if recipient_email is None:
-      return jsonify({"message": "Recipient email not found. Please submit recipient email before ending session"}), 400
+    if recipient_email:
+      return jsonify({"status": "OK", "message": "Recipient will receive meeting notes shortly. Thank you for using MeetTrack"}), 200
+    else:
+      return jsonify({"status": "error", "message": "Recipient email not found. Please submit recipient email before ending session."}), 400
+  except Exception as e:
+    return jsonify({"message": str(e)}), 500
+  
+
+@app.route("/end-session", methods=["POST"])
+def end_session():
+  try:
+    session_id = request.json.get("session_id")
+    session_data = retrieve_session_data(session_id)
 
     # processing on meeting end
     audio_processing_obj.offline_audio_pipeline()

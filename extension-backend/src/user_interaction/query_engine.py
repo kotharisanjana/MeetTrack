@@ -96,7 +96,7 @@ class UserInteraction(CurrMeetingQueryEngine):
         if prev_meeting_tool and self.curr_meeting_tool:
             tools = [prev_meeting_tool, self.curr_meeting_tool]
         elif prev_meeting_tool:
-            tools = [self.prev_meeting_tool]
+            tools = [prev_meeting_tool]
         elif self.curr_meeting_tool:
             tools = [self.curr_meeting_tool]
         else:
@@ -116,13 +116,13 @@ class UserInteraction(CurrMeetingQueryEngine):
         # create OpenAI agent with query plan tool to answer user queries
         self.agent = OpenAIAgent.from_tools(
             [self.query_plan_tool],
-            max_function_calls=1,
+            max_function_calls=2,
             llm=llm,
             verbose=True,
         )
 
     def get_response(self, user_query):
-        user_query = "Answer user question based on the meeting transcript. Give a brief and accurate answer. " + user_query
+        user_query = "Answer user question based on the meeting transcript. Give a brief, accurate and coherent answer in about 100 words. " + user_query
         response = self.agent.query(user_query)
         return str(response)        
 

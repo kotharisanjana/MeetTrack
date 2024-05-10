@@ -12,39 +12,13 @@ class VideoProcessing:
         # extract audio from webm and saves it locally as .wav file
         ffmpeg_extract_audio(self.local_recording_path, local_audio_path)
         
-    def capture_screenshots(self, duration=15, interval=5):
+    def capture_screenshots(self, duration=30, interval=5):
         """
         Captures screenshots from a video file at specified intervals.
 
         interval: Interval in seconds between each screenshot.
         return: List of images.
-        """
-        # # convert webm to mp4
-        # mp4_path = self.local_recording_path.replace("webm", "mp4")
-
-        # ffmpeg_command = [
-        #     "ffmpeg",
-        #     "-i",
-        #     self.local_recording_path,
-        #     mp4_path,
-        #     "-speed",
-        #     "16"
-        # ]
-        # subprocess.run(ffmpeg_command) 
-
-        # # capture frames from mp4 in given interval
-        # clip = VideoFileClip(mp4_path)
-        # duration = clip.duration
-        # screenshots = []
-
-        # for i in np.arange(0, duration, interval):
-        #     img = clip.get_frame(i)
-        #     screenshots.append(img)  
-
-        # os.remove(mp4_path)
-
-        # return screenshots
-
+        """        
         cap = cv2.VideoCapture(self.local_recording_path)
 
         if not cap.isOpened():
