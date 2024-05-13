@@ -46,6 +46,7 @@ MeetTrack is a Google Chrome browser extension that is designed to integrate wit
 4. Databases - PostgreSQL, Qdrant, Redis
 5. ML Models - OpenAI GPT, Google Gemini Vision, OpenAI Whisper, SBert, PyAnnote/Speaker-Diarization
 6. Frameworks - LangChain, LlamaIndex
+7. Docker
 
 <br/>
 
